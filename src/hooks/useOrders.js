@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 export function useOrders() {
   const [orders, setOrders] = useState([]);
@@ -12,14 +12,14 @@ export function useOrders() {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('/api/orders');
+      const response = await fetch("/api/orders");
       const data = await response.json();
-      
+
       if (data.success) {
         setOrders(data.data);
       }
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      console.error("Error fetching orders:", error);
     } finally {
       setLoading(false);
     }

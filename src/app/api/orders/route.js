@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 export async function GET(request) {
   try {
     // TODO: Get all orders
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      data: []
+      data: [],
     });
   } catch (error) {
     return NextResponse.json(
@@ -18,12 +18,12 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    
+
     // TODO: Create new order
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: true,
-      message: 'Order created'
+      message: "Order created",
     });
   } catch (error) {
     return NextResponse.json(

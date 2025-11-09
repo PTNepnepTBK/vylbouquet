@@ -1,16 +1,24 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 export async function POST(request) {
   try {
-    // TODO: Implementasi logout logic
-    
-    return NextResponse.json({ 
+    const response = NextResponse.json({
       success: true,
-      message: 'Logout endpoint ready'
+      message: "Logout berhasil",
     });
+
+    // Hapus cookie auth_token
+    response.cookies.set("auth_token", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 0,
+    });
+
+    return response;
   } catch (error) {
     return NextResponse.json(
-      { success: false, message: error.message },
+      { success: false, message: "Terjadi kesalahan pada server" },
       { status: 500 }
     );
   }

@@ -1,19 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 export async function GET(request) {
   try {
     // TODO: Get dashboard statistics
-    
+
     const stats = {
       newOrders: 0,
       confirmedOrders: 0,
       inProcessOrders: 0,
-      completedOrders: 0
+      completedOrders: 0,
     };
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: true,
-      data: stats
+      data: stats,
     });
   } catch (error) {
     return NextResponse.json(

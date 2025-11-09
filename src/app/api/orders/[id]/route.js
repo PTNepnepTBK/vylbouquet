@@ -1,14 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 export async function GET(request, { params }) {
   try {
     const { id } = params;
-    
+
     // TODO: Get order by id
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: true,
-      data: null
+      data: null,
     });
   } catch (error) {
     return NextResponse.json(
@@ -22,12 +22,12 @@ export async function PUT(request, { params }) {
   try {
     const { id } = params;
     const body = await request.json();
-    
+
     // TODO: Update order
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: true,
-      message: 'Order updated'
+      message: "Order updated",
     });
   } catch (error) {
     return NextResponse.json(
