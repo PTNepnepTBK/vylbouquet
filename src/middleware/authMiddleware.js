@@ -1,13 +1,15 @@
 // Middleware untuk cek autentikasi admin
 
+export function getAuthStatus(request) {
+  // Cek JWT dari cookie
+  const token = request.cookies.get("auth_token");
+  // Di sini bisa ditambah verifikasi token jika perlu
+  return !!token;
+}
+
 export function authMiddleware(handler) {
   return async (request, context) => {
-    // TODO: Implement authentication check
-    // Check JWT token dari cookie atau header
-
-    const token = request.cookies.get("auth_token");
-
-    if (!token) {
+    if (!getAuthStatus(request)) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -19,20 +21,6 @@ export function authMiddleware(handler) {
         }
       );
     }
-
-    // Verify token
-    // const decoded = verifyToken(token.value);
-
-    // if (!decoded) {
-    //   return new Response(JSON.stringify({
-    //     success: false,
-    //     message: 'Invalid token'
-    //   }), {
-    //     status: 401,
-    //     headers: { 'Content-Type': 'application/json' }
-    //   });
-    // }
-
     return handler(request, context);
   };
 }

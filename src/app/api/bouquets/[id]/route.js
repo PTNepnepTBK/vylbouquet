@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authMiddleware } from "../../../../middleware/authMiddleware";
 
 // GET - Ambil bouquet by ID
 export async function GET(request, { params }) {
@@ -31,7 +32,7 @@ export async function GET(request, { params }) {
 }
 
 // PUT - Update bouquet
-export async function PUT(request, { params }) {
+export const PUT = authMiddleware(async function PUT(request, { params }) {
   try {
     const { id } = params;
     const body = await request.json();
@@ -84,10 +85,10 @@ export async function PUT(request, { params }) {
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE - Hapus bouquet
-export async function DELETE(request, { params }) {
+export const DELETE = authMiddleware(async function DELETE(request, { params }) {
   try {
     const { id } = params;
 
@@ -115,4 +116,4 @@ export async function DELETE(request, { params }) {
       { status: 500 }
     );
   }
-}
+});

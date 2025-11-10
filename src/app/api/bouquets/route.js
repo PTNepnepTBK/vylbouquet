@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Op } from "sequelize";
+import { authMiddleware } from "../../../middleware/authMiddleware";
 
 // GET - Ambil semua bouquets
 export async function GET(request) {
@@ -7,10 +8,13 @@ export async function GET(request) {
     // Load Bouquet model
     const Bouquet = (await import("../../../models/Bouquet")).default;
 
-    // Get query params untuk filter
+    // Get query params untuk filter dan pagination
     const { searchParams } = new URL(request.url);
     const isActive = searchParams.get("is_active");
     const q = searchParams.get("q");
+    const page = parseInt(searchParams.get("page")) || 1;
+    const limit = parseInt(searchParams.get("limit")) || 9;
+    const offset = (page - 1) * limit;
 
     const where = {};
 
@@ -28,14 +32,26 @@ export async function GET(request) {
       ];
     }
 
+    // Get total count
+    const total = await Bouquet.count({ where });
+
+    // Get paginated data
     const bouquets = await Bouquet.findAll({
       where,
       order: [["created_at", "DESC"]],
+      limit,
+      offset,
     });
+
+    const totalPages = Math.ceil(total / limit);
 
     return NextResponse.json({
       success: true,
       data: bouquets,
+      total,
+      page,
+      totalPages,
+      limit,
     });
   } catch (error) {
     console.error("Get bouquets error:", error);
@@ -47,7 +63,7 @@ export async function GET(request) {
 }
 
 // POST - Tambah bouquet baru
-export async function POST(request) {
+export const POST = authMiddleware(async function POST(request) {
   try {
     const body = await request.json();
     const { name, price, description, image_url, is_active } = body;
@@ -90,4 +106,4 @@ export async function POST(request) {
       { status: 500 }
     );
   }
-}
+});
