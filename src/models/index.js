@@ -2,6 +2,7 @@ const sequelize = require("../lib/sequelize");
 const Bouquet = require("./Bouquet");
 const Order = require("./Order");
 const OrderLog = require("./OrderLog");
+const OrderImage = require("./OrderImage");
 const Admin = require("./Admin");
 const Setting = require("./Setting");
 
@@ -14,6 +15,9 @@ Order.hasMany(OrderLog, { foreignKey: "order_id", as: "logs" });
 
 OrderLog.belongsTo(Admin, { foreignKey: "admin_id", as: "admin" });
 Admin.hasMany(OrderLog, { foreignKey: "admin_id", as: "logs" });
+
+OrderImage.belongsTo(Order, { foreignKey: "order_id", as: "order" });
+Order.hasMany(OrderImage, { foreignKey: "order_id", as: "images" });
 
 // Sync models (hanya untuk development)
 const syncDatabase = async () => {
@@ -33,6 +37,7 @@ module.exports = {
   Bouquet,
   Order,
   OrderLog,
+  OrderImage,
   Admin,
   Setting,
   syncDatabase,

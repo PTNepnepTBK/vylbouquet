@@ -29,6 +29,17 @@ const Order = sequelize.define(
     sender_name: {
       type: DataTypes.STRING(255),
       allowNull: false,
+      comment: "Nama pengirim transfer/pembayaran",
+    },
+    sender_account_number: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: "Nomor rekening pengirim",
+    },
+    sender_phone: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: "Nomor WhatsApp/telepon pengirim untuk konfirmasi",
     },
     bouquet_price: {
       type: DataTypes.DECIMAL(10, 2),
@@ -69,10 +80,12 @@ const Order = sequelize.define(
     reference_image_url: {
       type: DataTypes.STRING(500),
       allowNull: true,
+      comment: "DEPRECATED - gunakan tabel order_images",
     },
     payment_proof_url: {
       type: DataTypes.STRING(500),
       allowNull: true,
+      comment: "DEPRECATED - gunakan tabel order_images",
     },
     order_status: {
       type: DataTypes.ENUM(
