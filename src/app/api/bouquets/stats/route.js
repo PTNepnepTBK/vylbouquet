@@ -20,11 +20,14 @@ export async function GET(request) {
     const totalBouquets = allBouquets.length;
     const activeBouquets = allBouquets.filter((b) => b.is_active).length;
     const inactiveBouquets = allBouquets.filter((b) => !b.is_active).length;
-    const totalPrice = allBouquets.reduce(
+    
+    // Hitung rata-rata hanya dari bouquet yang aktif
+    const activeBouquetList = allBouquets.filter((b) => b.is_active);
+    const totalPrice = activeBouquetList.reduce(
       (sum, bouquet) => sum + parseFloat(bouquet.price || 0),
       0
     );
-    const averagePrice = totalBouquets > 0 ? totalPrice / totalBouquets : 0;
+    const averagePrice = activeBouquets > 0 ? totalPrice / activeBouquets : 0;
     return NextResponse.json({
       success: true,
       data: {

@@ -2,66 +2,58 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Badge from '@/components/ui/Badge';
 import { useAuth } from '@/hooks/useAuth';
+import SearchBar from '@/components/ui/SearchBar';
+import FilterSelect from '@/components/ui/FilterSelect';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function OrdersPage() {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState('');
 
   useEffect(() => {
-    if (token) {
-      fetchOrders();
-    }
-  }, [token, filter]);
+    fetchOrders();
+  }, []);
 
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const url = filter === 'ALL' 
-        ? '/api/orders' 
-        : `/api/orders?status=${filter}`;
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const response = await fetch('/api/orders');
       const data = await response.json();
       
       if (data.success) {
         setOrders(data.data);
-      } else {
-        alert('Error fetching orders: ' + data.message);
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error fetching orders');
     } finally {
       setLoading(false);
     }
   };
 
   const getStatusBadge = (status) => {
-    const statusConfig = {
-      WAITING_CONFIRMATION: { variant: 'warning', text: 'Menunggu Konfirmasi' },
-      PAYMENT_CONFIRMED: { variant: 'info', text: 'Pembayaran Terkonfirmasi' },
-      IN_PROCESS: { variant: 'info', text: 'Dalam Proses' },
-      READY_FOR_PICKUP: { variant: 'success', text: 'Siap Diambil' },
-      COMPLETED: { variant: 'success', text: 'Selesai' },
-      CANCELLED: { variant: 'danger', text: 'Dibatalkan' },
+    const config = {
+      WAITING_CONFIRMATION: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Menunggu Konfirmasi' },
+      PAYMENT_CONFIRMED: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Terkonfirmasi' },
+      IN_PROCESS: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Dalam Proses' },
+      READY_FOR_PICKUP: { bg: 'bg-green-100', text: 'text-green-800', label: 'Siap Diambil' },
+      COMPLETED: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Selesai' },
+      CANCELLED: { bg: 'bg-red-100', text: 'text-red-800', label: 'Dibatalkan' },
     };
-    
-    const config = statusConfig[status] || { variant: 'default', text: status };
-    return <Badge variant={config.variant}>{config.text}</Badge>;
+    const c = config[status] || { bg: 'bg-gray-100', text: 'text-gray-800', label: status };
+    return <span className={`px-2 py-1 rounded text-xs font-medium ${c.bg} ${c.text}`}>{c.label}</span>;
   };
 
-  const getPaymentBadge = (status) => {
-    return status === 'PAID' 
-      ? <Badge variant="success">Lunas</Badge>
-      : <Badge variant="warning">Belum Lunas</Badge>;
+  const getPaymentBadge = (status, remaining) => {
+    if (status === 'PAID' || remaining <= 0) {
+      return <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">Lunas</span>;
+    }
+    return <span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Belum Lunas</span>;
   };
 
   const formatPrice = (price) => {
@@ -69,161 +61,295 @@ export default function OrdersPage() {
       style: 'currency',
       currency: 'IDR',
       minimumFractionDigits: 0,
-    }).format(price);
+    }).format(price || 0);
   };
 
   const formatDate = (dateStr) => {
     return new Date(dateStr).toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: 'short',
       day: 'numeric',
+      month: 'short',
+      year: 'numeric',
     });
   };
 
+  const getStatusLabel = (status) => {
+    const labels = {
+      WAITING_CONFIRMATION: 'Menunggu Konfirmasi',
+      PAYMENT_CONFIRMED: 'Terkonfirmasi',
+      IN_PROCESS: 'Dalam Proses',
+      READY_FOR_PICKUP: 'Siap Diambil',
+      COMPLETED: 'Selesai',
+      CANCELLED: 'Dibatalkan'
+    };
+    return labels[status] || status;
+  };
+
+  const getPaymentStatusLabel = (status, remaining) => {
+    if (status === 'PAID' || remaining <= 0) return 'Lunas';
+    return 'Belum Lunas';
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+
+    // Add title
+    doc.setFontSize(18);
+    doc.text('Laporan Pesanan Vyl Buket', 14, 15);
+    
+    // Add date
+    doc.setFontSize(10);
+    const timestamp = new Date().toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    doc.text(`Tanggal Cetak: ${timestamp}`, 14, 22);
+
+    // Prepare table data
+    const tableData = filteredOrders.map(order => {
+      const totalPrice = parseFloat(order.bouquet_price || 0);
+      const remaining = parseFloat(order.remaining_amount || 0);
+      const dpAmount = parseFloat(order.dp_amount || 0);
+      const totalPaid = parseFloat(order.total_paid || 0);
+
+      return [
+        `#${order.id}`,
+        order.customer_name || '',
+        order.sender_phone || '',
+        order.bouquet?.name || 'Custom',
+        formatPrice(totalPrice),
+        order.payment_type === 'DP' ? 'DP' : 'Lunas',
+        formatPrice(dpAmount),
+        formatPrice(remaining),
+        getStatusLabel(order.order_status),
+        formatDate(order.pickup_date)
+      ];
+    });
+
+    // Add table
+    autoTable(doc, {
+      startY: 28,
+      head: [[
+        'ID',
+        'Pembeli',
+        'WhatsApp',
+        'Buket',
+        'Harga',
+        'Tipe',
+        'DP',
+        'Sisa',
+        'Status',
+        'Ambil'
+      ]],
+      body: tableData,
+      theme: 'striped',
+      styles: { 
+        fontSize: 8,
+        cellPadding: 2
+      },
+      headStyles: { 
+        fillColor: [139, 92, 246],
+        fontStyle: 'bold'
+      },
+      columnStyles: {
+        0: { cellWidth: 12 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 20 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 20 },
+        5: { cellWidth: 15 },
+        6: { cellWidth: 18 },
+        7: { cellWidth: 18 },
+        8: { cellWidth: 22 },
+        9: { cellWidth: 18 }
+      }
+    });
+
+    // Add footer
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.text(
+        `Halaman ${i} dari ${pageCount}`,
+        doc.internal.pageSize.width / 2,
+        doc.internal.pageSize.height - 10,
+        { align: 'center' }
+      );
+    }
+
+    // Save PDF
+    const timestamp2 = new Date().toISOString().split('T')[0];
+    doc.save(`laporan-pesanan-${timestamp2}.pdf`);
+  };
+
+  // Filter orders
+  const filteredOrders = orders.filter(order => {
+    const matchSearch = !searchQuery || 
+      order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.order_number?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchStatus = !statusFilter || order.order_status === statusFilter;
+    const matchPayment = !paymentFilter || order.payment_status === paymentFilter;
+    
+    return matchSearch && matchStatus && matchPayment;
+  });
+
+  const statusOptions = [
+    { value: '', label: 'Semua Status Pesanan' },
+    { value: 'WAITING_CONFIRMATION', label: 'Menunggu Konfirmasi' },
+    { value: 'PAYMENT_CONFIRMED', label: 'Terkonfirmasi' },
+    { value: 'IN_PROCESS', label: 'Dalam Proses' },
+    { value: 'READY_FOR_PICKUP', label: 'Siap Diambil' },
+    { value: 'COMPLETED', label: 'Selesai' },
+    { value: 'CANCELLED', label: 'Dibatalkan' },
+  ];
+
+  const paymentOptions = [
+    { value: '', label: 'Semua Status Pembayaran' },
+    { value: 'UNPAID', label: 'Belum Lunas' },
+    { value: 'PAID', label: 'Lunas' },
+  ];
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Manajemen Pesanan</h1>
-        <button 
-          onClick={fetchOrders}
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-pink-600"
+      <div className="mb-6 flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Manajemen Pesanan</h1>
+          <p className="text-gray-600 mt-1 text-sm">Kelola semua pesanan buket</p>
+        </div>
+        <button
+          onClick={exportToPDF}
+          disabled={filteredOrders.length === 0}
+          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
-          🔄 Refresh
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Ekspor PDF
         </button>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="mb-6 flex gap-2 overflow-x-auto">
-        {['ALL', 'WAITING_CONFIRMATION', 'PAYMENT_CONFIRMED', 'IN_PROCESS', 'READY_FOR_PICKUP', 'COMPLETED', 'CANCELLED'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilter(status)}
-            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${
-              filter === status 
-                ? 'bg-primary text-white' 
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            {status === 'ALL' ? 'Semua' : status.replace(/_/g, ' ')}
-          </button>
-        ))}
+      {/* Search and Filters */}
+      <div className="mb-6 flex flex-col md:flex-row gap-3">
+        <div className="flex-1">
+          <SearchBar 
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Cari nama pembeli..."
+          />
+        </div>
+        <FilterSelect
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={statusOptions}
+        />
+        <FilterSelect
+          value={paymentFilter}
+          onChange={setPaymentFilter}
+          options={paymentOptions}
+        />
       </div>
       
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         {loading ? (
-          <div className="p-6 text-center">
-            <p className="text-gray-500">Memuat pesanan...</p>
+          <div className="p-12 text-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"></div>
+            <p className="text-gray-500 mt-4 text-sm">Memuat pesanan...</p>
           </div>
-        ) : orders.length === 0 ? (
-          <div className="p-6 text-center">
-            <p className="text-gray-500">Belum ada pesanan</p>
+        ) : filteredOrders.length === 0 ? (
+          <div className="p-12 text-center">
+            <p className="text-gray-500 text-sm">Tidak ada pesanan ditemukan</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50\">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    No. Order
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
+                    ID Order
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Customer
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
+                    Nama Pembeli
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
                     Buket
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tanggal Ambil
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
+                    Harga Total
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
+                    Jenis Pembayaran
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status Order
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
+                    Sisa Pelunasan
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status Bayar
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
+                    Status Pesanan
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
+                    Status Pembayaran
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
                     Aksi
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {orders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{order.order_number}</div>
-                      <div className="text-xs text-gray-500">{formatDate(order.created_at)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{order.customer_name}</div>
-                      {order.sender_phone && (
-                        <div className="text-xs text-gray-500">📱 {order.sender_phone}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{order.bouquet?.name || 'N/A'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{formatDate(order.pickup_date)}</div>
-                      <div className="text-xs text-gray-500">{order.pickup_time}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-semibold text-gray-900">{formatPrice(order.bouquet_price)}</div>
-                      {order.payment_type === 'DP' && (
-                        <div className="text-xs text-orange-600">DP: {formatPrice(order.dp_amount)}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(order.order_status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getPaymentBadge(order.payment_status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <Link 
-                        href={`/orders/${order.id}`}
-                        className="text-primary hover:text-pink-600 font-medium"
-                      >
-                        Detail →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-gray-200 bg-white">{filteredOrders.map((order) => {
+                  const totalPrice = parseFloat(order.bouquet_price || 0);
+                  const remaining = parseFloat(order.remaining_amount || 0);
+
+                  return (
+                    <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-gray-900">#{order.id}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{order.customer_name}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-700">
+                          {order.bouquet?.name || 'Custom'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-gray-900">{formatPrice(totalPrice)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-700">
+                          {order.payment_type === 'DP' ? `DP (${formatPrice(order.dp_amount)})` : 'Lunas'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className={`text-sm font-semibold ${remaining > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                          {remaining > 0 ? formatPrice(remaining) : '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getStatusBadge(order.order_status)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getPaymentBadge(order.payment_status, remaining)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <Link 
+                          href={`/orders/${order.id}`}
+                          className="text-primary hover:text-pink-600 font-semibold transition-colors inline-flex items-center gap-1"
+                        >
+                          Detail
+                          <span>→</span>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
-
-      {/* Summary Stats */}
-      {!loading && orders.length > 0 && (
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600">Total Pesanan</p>
-            <p className="text-2xl font-bold text-blue-700">{orders.length}</p>
-          </div>
-          <div className="bg-yellow-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600">Menunggu Konfirmasi</p>
-            <p className="text-2xl font-bold text-yellow-700">
-              {orders.filter(o => o.order_status === 'WAITING_CONFIRMATION').length}
-            </p>
-          </div>
-          <div className="bg-green-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600">Selesai</p>
-            <p className="text-2xl font-bold text-green-700">
-              {orders.filter(o => o.order_status === 'COMPLETED').length}
-            </p>
-          </div>
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600">Total Pendapatan</p>
-            <p className="text-2xl font-bold text-purple-700">
-              {formatPrice(orders.reduce((sum, o) => sum + parseFloat(o.total_paid || 0), 0))}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

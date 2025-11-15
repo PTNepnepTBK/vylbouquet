@@ -1,20 +1,22 @@
 import { NextResponse } from "next/server";
 import { Order, Bouquet, OrderImage, sequelize } from "@/models";
 import { verifyToken } from "@/lib/auth";
+import { cookies } from "next/headers";
 
 // GET - Read all orders (Protected dengan JWT)
 export async function GET(request) {
   try {
-    // Cek JWT token dari header
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    // Cek JWT token dari cookie
+    const cookieStore = cookies();
+    const token = cookieStore.get("auth_token")?.value;
+
+    if (!token) {
       return NextResponse.json(
         { success: false, message: "Unauthorized - Token required" },
         { status: 401 }
       );
     }
 
-    const token = authHeader.split(" ")[1];
     const decoded = verifyToken(token);
 
     if (!decoded) {
@@ -143,8 +145,8 @@ export async function POST(request) {
     let paymentStatus = "UNPAID";
 
     if (body.payment_type === "DP") {
-      // DP minimal 50%
-      dpAmount = bouquetPrice * 0.5;
+      // DP 30%
+      dpAmount = bouquetPrice * 0.3;
       remainingAmount = bouquetPrice - dpAmount;
       totalPaid = 0; // Belum bayar, menunggu konfirmasi
     } else if (body.payment_type === "FULL") {
@@ -177,6 +179,21 @@ export async function POST(request) {
       },
       { transaction }
     );
+
+    // Simpan foto buket yang diinginkan (bisa lebih dari 1)
+    if (body.desired_bouquet_images && Array.isArray(body.desired_bouquet_images)) {
+      for (let i = 0; i < body.desired_bouquet_images.length; i++) {
+        await OrderImage.create(
+          {
+            order_id: order.id,
+            image_url: body.desired_bouquet_images[i],
+            image_type: "DESIRED_BOUQUET",
+            display_order: i + 1,
+          },
+          { transaction }
+        );
+      }
+    }
 
     // Simpan foto referensi (bisa lebih dari 1)
     if (body.reference_images && Array.isArray(body.reference_images)) {

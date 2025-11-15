@@ -110,170 +110,107 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Pengaturan Pembayaran</h1>
-        <p className="text-gray-600 mt-1">Kelola informasi pembayaran dan ketentuan toko</p>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Pengaturan Pembayaran & Ketentuan</h1>
+        <p className="text-gray-600 mt-1 text-sm">Kelola informasi pembayaran dan ketentuan pemesanan</p>
       </div>
       
-      <div className="bg-white rounded-lg shadow p-6">
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Rekening Bank */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* DP Settings */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Pengaturan DP</h2>
+          
           <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-              Rekening Bank
-            </h2>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Nomor Rekening BCA"
-                  name="bank_bca"
-                  value={settings.bank_bca}
-                  onChange={handleChange}
-                  placeholder="Contoh: 4373021906"
-                />
-                <Input
-                  label="Atas Nama (BCA)"
-                  name="bank_bca_name"
-                  value={settings.bank_bca_name}
-                  onChange={handleChange}
-                  placeholder="Contoh: Vyl Buket"
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Nomor Rekening SeaBank"
-                  name="bank_seabank"
-                  value={settings.bank_seabank}
-                  onChange={handleChange}
-                  placeholder="Contoh: 901081198646"
-                />
-                <Input
-                  label="Atas Nama (SeaBank)"
-                  name="bank_seabank_name"
-                  value={settings.bank_seabank_name}
-                  onChange={handleChange}
-                  placeholder="Contoh: Vyl Buket"
-                />
-              </div>
-            </div>
+            <Input
+              label="Persentase Minimal DP (%)"
+              name="min_dp_percent"
+              type="number"
+              value={settings.min_dp_percent}
+              onChange={handleChange}
+              placeholder="30"
+              min="0"
+              max="100"
+            />
+            <p className="text-sm text-gray-500 mt-1">Minimal persentase DP yang harus dibayar customer</p>
+          </div>
+        </div>
+
+        {/* Payment Methods */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Metode Pembayaran</h2>
+          
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-3">Rekening BCA</h3>
+            <Input
+              label="Rekening BCA"
+              name="bank_bca"
+              value={settings.bank_bca}
+              onChange={handleChange}
+              placeholder="4373021906 a.n Vina Enjelia"
+            />
           </div>
 
-          {/* E-Wallet */}
           <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-              E-Wallet
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Nomor ShopeePay"
-                name="ewallet_shopeepay"
-                value={settings.ewallet_shopeepay}
-                onChange={handleChange}
-                placeholder="Contoh: 0882002048431"
-              />
-              <Input
-                label="Atas Nama (ShopeePay)"
-                name="ewallet_shopeepay_name"
-                value={settings.ewallet_shopeepay_name}
-                onChange={handleChange}
-                placeholder="Contoh: Vyl Buket"
-              />
-            </div>
-          </div>
-          
-          {/* Ketentuan */}
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Ketentuan Pembayaran
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Minimal DP (%)"
-                type="number"
-                name="min_dp_percent"
-                value={settings.min_dp_percent}
-                onChange={handleChange}
-                placeholder="30"
-                min="0"
-                max="100"
-              />
-            </div>
+            <h3 className="font-semibold text-gray-900 mb-3">Rekening SeaBank</h3>
+            <Input
+              label="Rekening SeaBank"
+              name="bank_seabank"
+              value={settings.bank_seabank}
+              onChange={handleChange}
+              placeholder="901081198646 a.n Vina Enjelia"
+            />
           </div>
 
-          {/* Kontak */}
           <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              Informasi Kontak
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Nomor WhatsApp"
-                name="whatsapp_number"
-                value={settings.whatsapp_number}
-                onChange={handleChange}
-                placeholder="Contoh: 6282134567890"
-              />
-              <Input
-                label="Instagram Handle"
-                name="instagram_handle"
-                value={settings.instagram_handle}
-                onChange={handleChange}
-                placeholder="Contoh: @vylbuket"
-              />
-            </div>
+            <h3 className="font-semibold text-gray-900 mb-3">Nomor ShopeePay</h3>
+            <Input
+              label="Nomor ShopeePay"
+              name="ewallet_shopeepay"
+              value={settings.ewallet_shopeepay}
+              onChange={handleChange}
+              placeholder="0882002048431 a.n Vina Enjelia"
+            />
           </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-3">Catatan ShopeePay</h3>
+            <textarea
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+              rows="2"
+              placeholder="Transfer ShopeePay dari bank +1000 admin"
+              value="Transfer ShopeePay dari bank +1000 admin"
+              readOnly
+            />
+          </div>
+        </div>
+
+        {/* Operational Hours */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Jam Operasional</h2>
           
-          {/* Submit Button */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={fetchSettings}
-              disabled={saving}
-            >
-              Reset
-            </Button>
-            <Button
-              type="submit"
-              disabled={saving}
-            >
-              {saving ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Menyimpan...
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Simpan Pengaturan
-                </>
-              )}
-            </Button>
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-3">Jam Pengambilan</h3>
+            <textarea
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+              rows="3"
+              placeholder="Senin-Sabtu: 08.00-18.00 WIB | Minggu: 10.00-15.00 WIB"
+              defaultValue="Senin-Sabtu: 08.00-18.00 WIB | Minggu: 10.00-15.00 WIB"
+            />
           </div>
-        </form>
-      </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="flex justify-center">
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-primary text-white px-8 py-3 rounded-lg hover:bg-pink-600 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed w-full max-w-md flex items-center justify-center gap-2"
+          >
+            <span>💾</span>
+            {saving ? 'Menyimpan...' : 'Simpan Pengaturan'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

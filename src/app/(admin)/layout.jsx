@@ -1,51 +1,55 @@
 'use client';
 
-// Gunakan path relatif untuk menghindari masalah alias pada beberapa environment
 import { useAuth } from '../../hooks/useAuth';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  HomeIcon, 
+  Squares2X2Icon,
   ShoppingBagIcon, 
   CubeIcon, 
   Cog6ToothIcon,
-  ArrowRightOnRectangleIcon,
-  UserCircleIcon
+  ArrowLeftStartOnRectangleIcon
 } from '@heroicons/react/24/outline';
 
 export default function AdminLayout({ children }) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
 
   // Jangan tampilkan layout di halaman login
   if (pathname === '/login') {
     return <>{children}</>;
   }
 
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
+
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-    { name: 'Pesanan', href: '/orders', icon: ShoppingBagIcon },
-    { name: 'Buket', href: '/bouquets', icon: CubeIcon },
+    { name: 'Dashboard', href: '/dashboard', icon: Squares2X2Icon },
+    { name: 'Manajemen Pesanan', href: '/orders', icon: ShoppingBagIcon },
+    { name: 'Katalog Buket', href: '/bouquets', icon: CubeIcon },
     { name: 'Pengaturan', href: '/settings', icon: Cog6ToothIcon },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-50">
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white min-h-screen fixed">
+        <aside className="w-64 bg-white min-h-screen fixed shadow-sm">
           {/* Logo */}
-          <div className="p-6 border-b border-gray-700">
-            <h2 className="text-2xl font-bold">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-2xl font-bold text-gray-900">
               vyl<span className="text-primary">.bouquet</span>
             </h2>
-            <p className="text-sm text-gray-400 mt-1">Admin Panel</p>
+            <p className="text-sm text-gray-500 mt-1">Admin Panel</p>
           </div>
 
           {/* Navigation */}
-          <nav className="p-4 space-y-2">
+          <nav className="p-4 space-y-1">
             {navigation.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
               const Icon = item.icon;
               
               return (
@@ -54,8 +58,8 @@ export default function AdminLayout({ children }) {
                   href={item.href}
                   className={`flex items-center gap-3 py-3 px-4 rounded-lg transition-all ${
                     isActive
-                      ? 'bg-primary text-white shadow-lg'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      ? 'bg-pink-50 text-primary border-l-4 border-primary'
+                      : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -64,34 +68,30 @@ export default function AdminLayout({ children }) {
               );
             })}
           </nav>
-
-          {/* User Info & Logout */}
-          {user && (
-            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
-              <div className="flex items-center gap-3 mb-3 p-3 bg-gray-700 rounded-lg">
-                <UserCircleIcon className="w-10 h-10 text-gray-400" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">
-                    {user.full_name}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate">
-                    {user.username}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={logout}
-                className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-              >
-                <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                <span className="font-medium">Keluar</span>
-              </button>
-            </div>
-          )}
         </aside>
         
         {/* Main Content */}
-        <main className="flex-1 ml-64">
+        <main className="flex-1 ml-64 min-h-screen">
+          {/* Header */}
+          <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+            <div className="px-8 py-4 flex items-center justify-end">
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900">{user?.username || 'Admin'}</p>
+                  <p className="text-xs text-gray-500">Administrator</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <ArrowLeftStartOnRectangleIcon className="w-5 h-5" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            </div>
+          </header>
+          
+          {/* Content */}
           <div className="p-8">
             {children}
           </div>

@@ -109,20 +109,18 @@ export default function BouquetsPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex flex-col gap-6 mb-8">
+      <div className="flex flex-col gap-6 mb-6">
         <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Katalog Buket</h1>
-          <p className="text-gray-600 mt-1">Kelola buket yang ditampilkan di katalog customer</p>
+          <h1 className="text-2xl font-bold text-gray-900">Katalog Buket</h1>
+          <p className="text-gray-600 mt-1 text-sm">Kelola buket yang ditampilkan di website</p>
         </div>
         <button
           onClick={handleAdd}
-          className="bg-primary hover:bg-pink-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg hover:shadow-xl flex items-center gap-2"
+          className="bg-primary hover:bg-pink-600 text-white px-5 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Tambah Buket
+          <span className="text-lg">+</span>
+          Tambah Buket Baru
         </button>
         </div>
 
@@ -224,7 +222,7 @@ export default function BouquetsPage() {
           {bouquets.map((bouquet) => (
             <div
               key={bouquet.id}
-              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
+              className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden"
             >
               {/* Image */}
               <div className="relative h-48 bg-gray-100">
@@ -251,9 +249,9 @@ export default function BouquetsPage() {
               </div>
 
               {/* Content */}
-              <div className="p-4">
-                <h3 className="text-lg font-bold text-gray-900 mb-1">{bouquet.name}</h3>
-                <p className="text-xl font-semibold text-primary mb-2">{formatPrice(bouquet.price)}</p>
+              <div className="p-5">
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{bouquet.name}</h3>
+                <p className="text-xl font-bold text-primary mb-3">{formatPrice(bouquet.price)}</p>
                 
                 {bouquet.description && (
                   <p className="text-sm text-gray-600 mb-4 line-clamp-2">
@@ -265,14 +263,16 @@ export default function BouquetsPage() {
                 <div className="flex gap-2 mt-4">
                   <button
                     onClick={() => handleEdit(bouquet)}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                    className="flex-1 bg-blue-50 text-blue-600 py-2 px-3 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm flex items-center justify-center gap-1.5"
                   >
+                    <span>✏️</span>
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(bouquet.id, bouquet.name)}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                    className="flex-1 bg-red-50 text-red-600 py-2 px-3 rounded-lg hover:bg-red-100 transition-colors font-medium text-sm flex items-center justify-center gap-1.5"
                   >
+                    <span>🗑️</span>
                     Hapus
                   </button>
                 </div>

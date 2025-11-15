@@ -11,7 +11,13 @@ export function useAuth() {
   useEffect(() => {
     // Check auth status dari localStorage
     const storedUser = localStorage.getItem("admin_user");
-    if (storedUser) {
+    const token = localStorage.getItem("token");
+    
+    // Jika ada user tapi tidak ada token, logout otomatis
+    if (storedUser && !token) {
+      localStorage.removeItem("admin_user");
+      setUser(null);
+    } else if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
     setLoading(false);
@@ -32,6 +38,12 @@ export function useAuth() {
       if (data.success) {
         setUser(data.data);
         localStorage.setItem("admin_user", JSON.stringify(data.data));
+        
+        // Simpan token juga ke localStorage untuk API calls
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+        }
+        
         return { success: true, message: data.message };
       } else {
         return { success: false, message: data.message };
@@ -50,6 +62,7 @@ export function useAuth() {
 
       setUser(null);
       localStorage.removeItem("admin_user");
+      localStorage.removeItem("token");
       router.push("/login");
     } catch (error) {
       console.error("Logout error:", error);

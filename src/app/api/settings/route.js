@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authMiddleware } from "../../../middleware/authMiddleware";
 
 // GET - Ambil semua settings
 export async function GET(request) {
@@ -29,7 +30,7 @@ export async function GET(request) {
 }
 
 // PUT - Update settings
-export async function PUT(request) {
+export const PUT = authMiddleware(async function PUT(request) {
   try {
     const body = await request.json();
 
@@ -64,4 +65,4 @@ export async function PUT(request) {
       { status: 500 }
     );
   }
-}
+});

@@ -55,10 +55,11 @@ export async function POST(request) {
       full_name: admin.full_name,
     });
 
-    // Create response dengan cookie
+    // Create response dengan cookie dan token
     const response = NextResponse.json({
       success: true,
       message: "Login berhasil",
+      token: token, // Kirim token juga di response body
       data: {
         id: admin.id,
         username: admin.username,
@@ -73,6 +74,7 @@ export async function POST(request) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: "/",
     });
 
     return response;

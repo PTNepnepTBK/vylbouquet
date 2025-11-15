@@ -30,6 +30,7 @@ export default function OrderPage() {
 
   const [referenceFiles, setReferenceFiles] = useState([]);
   const [paymentFiles, setPaymentFiles] = useState([]);
+  const [desiredBouquetFiles, setDesiredBouquetFiles] = useState([]);
 
   useEffect(() => {
     fetchBouquets();
@@ -68,8 +69,10 @@ export default function OrderPage() {
     const files = Array.from(e.target.files);
     if (type === 'reference') {
       setReferenceFiles(files);
-    } else {
+    } else if (type === 'payment') {
       setPaymentFiles(files);
+    } else if (type === 'desired') {
+      setDesiredBouquetFiles(files);
     }
   };
 
@@ -101,9 +104,19 @@ export default function OrderPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate payment proof
+    if (paymentFiles.length === 0) {
+      alert('Harap upload bukti transfer/DP terlebih dahulu');
+      return;
+    }
+    
     setLoading(true);
 
     try {
+      // Upload desired bouquet images
+      const desiredUrls = await uploadFiles(desiredBouquetFiles, 'desired');
+      
       // Upload reference images
       const refUrls = await uploadFiles(referenceFiles, 'reference');
       
@@ -113,6 +126,7 @@ export default function OrderPage() {
       // Create order
       const orderData = {
         ...formData,
+        desired_bouquet_images: desiredUrls,
         reference_images: refUrls,
         payment_proofs: payUrls,
       };
@@ -149,7 +163,7 @@ export default function OrderPage() {
   const calculatePayment = () => {
     if (!selectedBouquet) return { dp: 0, remaining: 0, total: 0 };
     const total = parseFloat(selectedBouquet.price);
-    const dp = formData.payment_type === 'DP' ? total * 0.5 : total;
+    const dp = formData.payment_type === 'DP' ? total * 0.3 : total;
     const remaining = formData.payment_type === 'DP' ? total - dp : 0;
     return { dp, remaining, total };
   };
@@ -183,6 +197,12 @@ export default function OrderPage() {
                   className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200"
                   placeholder="Masukkan nama lengkap Anda"
                 />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Upload Foto Buket yang Diinginkan</label>
+                <p className="text-xs text-gray-500 mb-2">Upload foto contoh buket yang Anda inginkan (opsional)</p>
+                <input type="file" accept="image/*" multiple onChange={(e) => handleFileChange(e, 'desired')} className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md" />
               </div>
 
               <div className="mb-4">
@@ -229,7 +249,7 @@ export default function OrderPage() {
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">Tipe Pembayaran *</label>
                 <select value={formData.payment_type} onChange={(e) => setFormData({ ...formData, payment_type: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200">
-                  <option value="DP">Bayar 50% atau Lunas</option>
+                  <option value="DP">Bayar DP 30%</option>
                   <option value="FULL">Lunas</option>
                 </select>
               </div>
@@ -240,8 +260,13 @@ export default function OrderPage() {
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Upload Bukti Transfer / DP (opsional)</label>
-                <input type="file" accept="image/*" multiple onChange={(e) => handleFileChange(e, 'payment')} className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md" />
+                <label className="block text-sm font-medium mb-2">Nomor WhatsApp *</label>
+                <input type="tel" required value={formData.sender_phone} onChange={(e) => setFormData({ ...formData, sender_phone: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200" placeholder="08xxxxxxxxxx" />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Upload Bukti Transfer / DP *</label>
+                <input type="file" accept="image/*" multiple required onChange={(e) => handleFileChange(e, 'payment')} className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md" />
               </div>
 
               <button type="submit" disabled={loading || uploading} className="w-full bg-pink-400 hover:bg-pink-500 text-white font-semibold py-3 rounded-md mt-4">
@@ -258,7 +283,7 @@ export default function OrderPage() {
                 <div className="flex justify-between"><span>Harga Buket</span><span>{selectedBouquet ? formatPrice(payment.total) : 'Rp ...'}</span></div>
                 {formData.payment_type === 'DP' && (
                   <>
-                    <div className="flex justify-between text-sm"><span>DP (50%)</span><span>{selectedBouquet ? formatPrice(payment.dp) : 'Rp ...'}</span></div>
+                    <div className="flex justify-between text-sm"><span>DP (30%)</span><span>{selectedBouquet ? formatPrice(payment.dp) : 'Rp ...'}</span></div>
                     <div className="flex justify-between text-sm"><span>Sisa</span><span>{selectedBouquet ? formatPrice(payment.remaining) : 'Rp ...'}</span></div>
                   </>
                 )}

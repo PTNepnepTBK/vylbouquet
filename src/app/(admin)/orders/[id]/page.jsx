@@ -1,11 +1,436 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+
 export default function OrderDetailPage({ params }) {
-  return (
-    <div>
-      <h1 className="text-3xl font-bold mb-8">Detail Pesanan #{params.id}</h1>
+  const router = useRouter();
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+
+  useEffect(() => {
+    fetchOrderDetail();
+  }, []);
+
+  const fetchOrderDetail = async () => {
+    try {
+      const response = await fetch(`/api/orders/${params.id}`);
+      const data = await response.json();
       
-      <div className="bg-white rounded-lg shadow p-6">
-        <p className="text-gray-500">Detail pesanan akan ditampilkan di sini</p>
+      if (data.success) {
+        setOrder(data.data);
+      } else {
+        alert('Error: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Gagal memuat detail pesanan');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateOrderStatus = async (newStatus) => {
+    if (!confirm(`Ubah status pesanan menjadi "${getStatusLabel(newStatus)}"?`)) return;
+    
+    setUpdating(true);
+    try {
+      const response = await fetch(`/api/orders/${params.id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        alert('Status berhasil diupdate!');
+        fetchOrderDetail();
+      } else {
+        alert('Error: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Gagal update status');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const markAsFullyPaid = async () => {
+    if (!confirm('Tandai pembayaran sudah lunas?')) return;
+    
+    setUpdating(true);
+    try {
+      const response = await fetch(`/api/orders/${params.id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_status: 'PAID' })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        alert('Pembayaran ditandai lunas!');
+        fetchOrderDetail();
+      } else {
+        alert('Error: ' + data.message);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Gagal update pembayaran');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    const labels = {
+      WAITING_CONFIRMATION: 'Menunggu Konfirmasi',
+      PAYMENT_CONFIRMED: 'Pembayaran Terkonfirmasi',
+      IN_PROCESS: 'Dalam Proses Pembuatan',
+      READY_FOR_PICKUP: 'Siap Diambil',
+      COMPLETED: 'Selesai',
+      CANCELLED: 'Dibatalkan'
+    };
+    return labels[status] || status;
+  };
+
+  const getStatusBadge = (status) => {
+    const config = {
+      WAITING_CONFIRMATION: 'bg-yellow-100 text-yellow-800',
+      PAYMENT_CONFIRMED: 'bg-blue-100 text-blue-800',
+      IN_PROCESS: 'bg-purple-100 text-purple-800',
+      READY_FOR_PICKUP: 'bg-green-100 text-green-800',
+      COMPLETED: 'bg-gray-100 text-gray-800',
+      CANCELLED: 'bg-red-100 text-red-800'
+    };
+    return config[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(price || 0);
+  };
+
+  const formatDate = (dateStr) => {
+    return new Date(dateStr).toLocaleDateString('id-ID', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500">Pesanan tidak ditemukan</p>
+        <Link href="/orders" className="text-primary mt-4 inline-block">← Kembali ke Daftar Pesanan</Link>
+      </div>
+    );
+  }
+
+  const totalPrice = parseFloat(order.bouquet_price || 0);
+  const totalPaid = parseFloat(order.total_paid || 0);
+  const dpAmount = parseFloat(order.dp_amount || 0);
+  const remaining = parseFloat(order.remaining_amount || 0);
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <Link href="/orders" className="text-primary hover:text-pink-700 flex items-center gap-2 mb-4">
+          <ArrowLeftIcon className="w-5 h-5" />
+          <span>Kembali ke Daftar Pesanan</span>
+        </Link>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Detail Pesanan #{order.id}</h1>
+            <p className="text-gray-600 mt-1">
+              Dibuat pada {formatDate(order.created_at)}
+            </p>
+          </div>
+          <span className={`px-4 py-2 rounded-lg text-sm font-semibold ${getStatusBadge(order.order_status)}`}>
+            {getStatusLabel(order.order_status)}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Info */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Customer Info */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-bold mb-4">Informasi Pembeli</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">Nama Pembeli</p>
+                <p className="font-semibold">{order.customer_name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Nama Pengirim / Rekening</p>
+                <p className="font-semibold">{order.sender_name || '-'}</p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-sm text-gray-500">Nomor WhatsApp</p>
+                <p className="font-semibold">{order.sender_phone || '-'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Order Details */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-bold mb-4">Detail Pesanan</h2>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-500">Buket yang Dipesan</p>
+                <p className="font-semibold text-lg">{order.bouquet?.name || 'Custom'}</p>
+                <p className="text-primary font-bold text-xl mt-1">{formatPrice(order.bouquet_price)}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Tanggal Ambil</p>
+                  <p className="font-semibold">{formatDate(order.pickup_date)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Jam Ambil</p>
+                  <p className="font-semibold">{order.pickup_time || '-'}</p>
+                </div>
+              </div>
+
+              {order.card_message && (
+                <div>
+                  <p className="text-sm text-gray-500">Tulisan Kartu Ucapan</p>
+                  <div className="mt-1 p-3 bg-pink-50 border border-pink-200 rounded">
+                    <p className="text-gray-700 italic">"{order.card_message}"</p>
+                  </div>
+                </div>
+              )}
+
+              {order.additional_request && (
+                <div>
+                  <p className="text-sm text-gray-500">Request Tambahan</p>
+                  <p className="text-gray-700 mt-1">{order.additional_request}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Payment Info */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-bold mb-4">Informasi Pembayaran</h2>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Jenis Pembayaran</span>
+                <span className="font-semibold">{order.payment_type === 'DP' ? 'DP (Down Payment)' : 'Lunas'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Harga Total</span>
+                <span className="font-bold text-lg">{formatPrice(totalPrice)}</span>
+              </div>
+              {order.payment_type === 'DP' && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Nominal DP (30%)</span>
+                    <span className="font-semibold text-blue-600">{formatPrice(dpAmount)}</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t">
+                    <span className="text-gray-600 font-semibold">Sisa Pelunasan</span>
+                    <span className={`font-bold text-lg ${remaining > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                      {remaining > 0 ? formatPrice(remaining) : 'Lunas'}
+                    </span>
+                  </div>
+                </>
+              )}
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Dibayar</span>
+                <span className="font-bold text-green-600">{formatPrice(totalPaid)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Images Section */}
+          {order.images && order.images.length > 0 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold mb-4">Gambar Pesanan</h2>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Foto Buket yang Diinginkan */}
+                {order.images.filter(img => img.image_type === 'DESIRED_BOUQUET').map((img, idx) => (
+                  <div key={img.id}>
+                    <p className="text-sm text-gray-500 mb-2">Foto Buket yang Diinginkan {idx + 1}</p>
+                    <div className="relative h-48 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-purple-200">
+                      <Image 
+                        src={img.image_url} 
+                        alt={`Buket Diinginkan ${idx + 1}`}
+                        fill
+                        className="object-cover"
+                        onClick={() => window.open(img.image_url, '_blank')}
+                      />
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Foto Referensi */}
+                {order.images.filter(img => img.image_type === 'REFERENCE').map((img, idx) => (
+                  <div key={img.id}>
+                    <p className="text-sm text-gray-500 mb-2">Foto Referensi {idx + 1}</p>
+                    <div className="relative h-48 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-gray-200">
+                      <Image 
+                        src={img.image_url} 
+                        alt={`Referensi ${idx + 1}`}
+                        fill
+                        className="object-cover"
+                        onClick={() => window.open(img.image_url, '_blank')}
+                      />
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Bukti Transfer */}
+                {order.images.filter(img => img.image_type === 'PAYMENT_PROOF').map((img, idx) => (
+                  <div key={img.id}>
+                    <p className="text-sm text-gray-500 mb-2">Bukti Transfer {idx + 1}</p>
+                    <div className="relative h-48 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-green-200">
+                      <Image 
+                        src={img.image_url} 
+                        alt={`Bukti Transfer ${idx + 1}`}
+                        fill
+                        className="object-cover"
+                        onClick={() => window.open(img.image_url, '_blank')}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Bouquet Image from Catalog */}
+          {order.bouquet && order.bouquet.image_url && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-bold mb-4">Buket dari Katalog</h2>
+              <div>
+                <p className="text-sm text-gray-500 mb-2">{order.bouquet.name}</p>
+                <div className="relative h-64 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-pink-200">
+                  <Image 
+                    src={order.bouquet.image_url} 
+                    alt={order.bouquet.name}
+                    fill
+                    className="object-cover"
+                    onClick={() => window.open(order.bouquet.image_url, '_blank')}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Actions Sidebar */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-bold mb-4">Aksi</h2>
+            <div className="space-y-3">
+              {order.order_status === 'WAITING_CONFIRMATION' && (
+                <button
+                  onClick={() => updateOrderStatus('PAYMENT_CONFIRMED')}
+                  disabled={updating}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  ✓ Konfirmasi Pembayaran
+                </button>
+              )}
+              
+              {order.order_status === 'PAYMENT_CONFIRMED' && (
+                <button
+                  onClick={() => updateOrderStatus('IN_PROCESS')}
+                  disabled={updating}
+                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                >
+                  🛠️ Tandai Dalam Proses
+                </button>
+              )}
+              
+              {order.order_status === 'IN_PROCESS' && (
+                <button
+                  onClick={() => updateOrderStatus('READY_FOR_PICKUP')}
+                  disabled={updating}
+                  className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                >
+                  ✓ Tandai Siap Diambil
+                </button>
+              )}
+              
+              {order.order_status === 'READY_FOR_PICKUP' && (
+                <button
+                  onClick={() => updateOrderStatus('COMPLETED')}
+                  disabled={updating}
+                  className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50"
+                >
+                  ✓ Tandai Selesai
+                </button>
+              )}
+              
+              {remaining > 0 && order.order_status !== 'CANCELLED' && (
+                <button
+                  onClick={markAsFullyPaid}
+                  disabled={updating}
+                  className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                >
+                  💰 Tandai Pelunasan Dibayar
+                </button>
+              )}
+              
+              {order.order_status !== 'COMPLETED' && order.order_status !== 'CANCELLED' && (
+                <button
+                  onClick={() => updateOrderStatus('CANCELLED')}
+                  disabled={updating}
+                  className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+                  ✗ Batalkan Pesanan
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Order Timeline */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-bold mb-4">Status History</h2>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-start gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
+                <div>
+                  <p className="font-medium">Pesanan Dibuat</p>
+                  <p className="text-gray-500 text-xs">{new Date(order.created_at).toLocaleString('id-ID')}</p>
+                </div>
+              </div>
+              {order.updated_at && order.updated_at !== order.created_at && (
+                <div className="flex items-start gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
+                  <div>
+                    <p className="font-medium">Terakhir Diupdate</p>
+                    <p className="text-gray-500 text-xs">{new Date(order.updated_at).toLocaleString('id-ID')}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  )
+  );
 }
