@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import NavBar from '../../../components/ui/NavBar';
 
 export default function OrderPage() {
   const router = useRouter();
@@ -156,241 +157,135 @@ export default function OrderPage() {
   const payment = calculatePayment();
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold text-center mb-8">Form Pemesanan</h1>
+    <div className="min-h-screen bg-amber-50 py-12 px-4">
+      <div className="relative z-20">
+        <NavBar />
+      </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-8">
-          {/* Pilih Buket */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2">Pilih Buket *</label>
-            <select
-              required
-              value={formData.bouquet_id}
-              onChange={handleBouquetChange}
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary"
-            >
-              <option value="">-- Pilih Buket --</option>
-              {bouquets.map(bouquet => (
-                <option key={bouquet.id} value={bouquet.id}>
-                  {bouquet.name} - {formatPrice(bouquet.price)}
-                </option>
-              ))}
-            </select>
-          </div>
+      <div className="max-w-6xl mx-auto pt-14">
+        <h1 className="text-4xl font-serif font-bold text-center mb-2">Form Pemesanan</h1>
+        <p className="text-center text-amber-700 mb-8">Lengkapi data pesanan Anda</p>
 
-          {/* Preview Buket */}
-          {selectedBouquet && (
-            <div className="mb-6 p-4 bg-pink-50 rounded-lg border border-pink-200">
-              <div className="flex gap-4">
-                {selectedBouquet.image_url && (
-                  <div className="relative w-24 h-24 flex-shrink-0">
-                    <Image src={selectedBouquet.image_url} alt={selectedBouquet.name} fill className="object-cover rounded" />
-                  </div>
-                )}
-                <div className="flex-1">
-                  <h3 className="font-bold text-lg">{selectedBouquet.name}</h3>
-                  <p className="text-gray-600 text-sm mb-2">{selectedBouquet.description}</p>
-                  <p className="font-bold text-primary text-xl">{formatPrice(selectedBouquet.price)}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left: Form (span 2 columns on large) */}
+          <div className="lg:col-span-2">
+            <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-6 lg:p-8 border border-pink-100">
+              <div className="text-lg font-semibold mb-4 px-2">Detail Pesanan</div>
+
+              {/* Pilih Buket */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Nama Pembeli *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.customer_name}
+                  onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                  className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200"
+                  placeholder="Masukkan nama lengkap Anda"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Pilih Buket *</label>
+                <select
+                  required
+                  value={formData.bouquet_id}
+                  onChange={handleBouquetChange}
+                  className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200"
+                >
+                  <option value="">Pilih buket yang Anda inginkan</option>
+                  {bouquets.map(bouquet => (
+                    <option key={bouquet.id} value={bouquet.id}>{bouquet.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Tanggal Ambil *</label>
+                  <input type="date" required value={formData.pickup_date} onChange={(e) => setFormData({ ...formData, pickup_date: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Jam Ambil *</label>
+                  <input type="time" required value={formData.pickup_time} onChange={(e) => setFormData({ ...formData, pickup_time: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200" />
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Nama Pembeli */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2">Nama Pembeli *</label>
-            <input
-              type="text"
-              required
-              value={formData.customer_name}
-              onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary"
-              placeholder="Nama lengkap pembeli"
-            />
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Pesan Untuk Kartu Ucapan</label>
+                <textarea value={formData.card_message} onChange={(e) => setFormData({ ...formData, card_message: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200" rows={3} placeholder="Tulis pesan untuk kartu ucapan" />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Foto Request Tambahan (Opsional)</label>
+                <input type="file" accept="image/*" multiple onChange={(e) => handleFileChange(e, 'reference')} className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md" />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Request Tambahan (Opsional)</label>
+                <input type="text" value={formData.additional_request} onChange={(e) => setFormData({ ...formData, additional_request: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200" placeholder="Jelaskan request khusus untuk buket Anda" />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Tipe Pembayaran *</label>
+                <select value={formData.payment_type} onChange={(e) => setFormData({ ...formData, payment_type: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200">
+                  <option value="DP">Bayar 50% atau Lunas</option>
+                  <option value="FULL">Lunas</option>
+                </select>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Nama Pengirim / No Rekening *</label>
+                <input type="text" required value={formData.sender_name} onChange={(e) => setFormData({ ...formData, sender_name: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200" placeholder="Nama pengirim" />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Upload Bukti Transfer / DP (opsional)</label>
+                <input type="file" accept="image/*" multiple onChange={(e) => handleFileChange(e, 'payment')} className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md" />
+              </div>
+
+              <button type="submit" disabled={loading || uploading} className="w-full bg-pink-400 hover:bg-pink-500 text-white font-semibold py-3 rounded-md mt-4">
+                {uploading ? 'Mengupload gambar...' : loading ? 'Memproses pesanan...' : 'Kirim Pesanan Anda'}
+              </button>
+            </form>
           </div>
 
-          {/* Tanggal & Jam Ambil */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <label className="block text-sm font-semibold mb-2">Tanggal Ambil *</label>
-              <input
-                type="date"
-                required
-                value={formData.pickup_date}
-                onChange={(e) => setFormData({ ...formData, pickup_date: e.target.value })}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2">Jam Ambil *</label>
-              <input
-                type="time"
-                required
-                value={formData.pickup_time}
-                onChange={(e) => setFormData({ ...formData, pickup_time: e.target.value })}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          </div>
-
-          {/* Pesan Kartu Ucapan */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2">Pesan untuk Kartu Ucapan</label>
-            <textarea
-              value={formData.card_message}
-              onChange={(e) => setFormData({ ...formData, card_message: e.target.value })}
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary"
-              rows="3"
-              placeholder="Tulis pesan yang akan ditampilkan di kartu ucapan..."
-            />
-          </div>
-
-          {/* Permintaan Tambahan */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2">Permintaan Tambahan</label>
-            <textarea
-              value={formData.additional_request}
-              onChange={(e) => setFormData({ ...formData, additional_request: e.target.value })}
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary"
-              rows="3"
-              placeholder="Contoh: Tambahkan bunga mawar merah ekstra, bungkus dengan pita gold..."
-            />
-          </div>
-
-          {/* Upload Foto Referensi */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2">Upload Foto Referensi (Max 5 foto)</label>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(e) => handleFileChange(e, 'reference')}
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary"
-            />
-            <p className="text-xs text-gray-500 mt-1">Upload foto referensi buket yang Anda inginkan (opsional)</p>
-            {referenceFiles.length > 0 && (
-              <p className="text-sm text-green-600 mt-2">✓ {referenceFiles.length} foto terpilih</p>
-            )}
-          </div>
-
-          {/* Tipe Pembayaran */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2">Tipe Pembayaran *</label>
-            <div className="flex gap-4">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="DP"
-                  checked={formData.payment_type === 'DP'}
-                  onChange={(e) => setFormData({ ...formData, payment_type: e.target.value })}
-                  className="mr-2"
-                />
-                <span>DP 50%</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="FULL"
-                  checked={formData.payment_type === 'FULL'}
-                  onChange={(e) => setFormData({ ...formData, payment_type: e.target.value })}
-                  className="mr-2"
-                />
-                <span>Lunas</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Ringkasan Pembayaran */}
-          {selectedBouquet && (
-            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h3 className="font-bold mb-2">Ringkasan Pembayaran:</h3>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>Harga Buket:</span>
-                  <span className="font-semibold">{formatPrice(payment.total)}</span>
-                </div>
+          {/* Right: Sidebar */}
+          <aside className="space-y-6">
+            <div className="p-4 bg-pink-100 rounded-lg border border-pink-200">
+              <h3 className="font-semibold mb-2">Ringkasan Pembayaran</h3>
+              <div className="text-sm space-y-2">
+                <div className="flex justify-between"><span>Harga Buket</span><span>{selectedBouquet ? formatPrice(payment.total) : 'Rp ...'}</span></div>
                 {formData.payment_type === 'DP' && (
                   <>
-                    <div className="flex justify-between text-green-700">
-                      <span>DP (50%):</span>
-                      <span className="font-semibold">{formatPrice(payment.dp)}</span>
-                    </div>
-                    <div className="flex justify-between text-orange-700">
-                      <span>Sisa:</span>
-                      <span className="font-semibold">{formatPrice(payment.remaining)}</span>
-                    </div>
+                    <div className="flex justify-between text-sm"><span>DP (50%)</span><span>{selectedBouquet ? formatPrice(payment.dp) : 'Rp ...'}</span></div>
+                    <div className="flex justify-between text-sm"><span>Sisa</span><span>{selectedBouquet ? formatPrice(payment.remaining) : 'Rp ...'}</span></div>
                   </>
                 )}
-                <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
-                  <span>Yang Harus Dibayar Sekarang:</span>
-                  <span className="text-primary">{formatPrice(formData.payment_type === 'DP' ? payment.dp : payment.total)}</span>
-                </div>
               </div>
             </div>
-          )}
 
-          {/* Data Pengirim */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2">Nama Pengirim Transfer *</label>
-            <input
-              type="text"
-              required
-              value={formData.sender_name}
-              onChange={(e) => setFormData({ ...formData, sender_name: e.target.value })}
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary"
-              placeholder="Nama pengirim transfer"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <label className="block text-sm font-semibold mb-2">Nomor Rekening Pengirim</label>
-              <input
-                type="text"
-                value={formData.sender_account_number}
-                onChange={(e) => setFormData({ ...formData, sender_account_number: e.target.value })}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary"
-                placeholder="1234567890"
-              />
+            <div className="p-4 bg-white rounded-lg border border-pink-200">
+              <h3 className="font-semibold mb-2">Metode Pembayaran</h3>
+              <div className="text-sm space-y-2">
+                <div><strong>BCA:</strong> 4370321906 a.n Vina Enjelia</div>
+                <div><strong>SeaBank:</strong> 901081198646 a.n Vina Enjelia</div>
+                <div><strong>ShopePay:</strong> 0882002048431 a.n Vina Enjelia</div>
+                <p className="text-xs text-pink-400 mt-2">Transfer dari bank dikenakan biaya admin +Rp 1.000</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2">No. WhatsApp</label>
-              <input
-                type="tel"
-                value={formData.sender_phone}
-                onChange={(e) => setFormData({ ...formData, sender_phone: e.target.value })}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary"
-                placeholder="08123456789"
-              />
+
+            <div className="p-4 bg-white rounded-lg border border-pink-200">
+              <h3 className="font-semibold mb-2">Ketentuan Pemesanan</h3>
+              <ul className="text-sm list-disc pl-5 space-y-2 text-gray-600">
+                <li>DP minimal 30% dari total harga untuk mengunci pesanan</li>
+                <li>Pesanan dianggap diterima setelah DP dikonfirmasi</li>
+                <li>Pelunasan bisa dilakukan saat ambil atau H-1</li>
+                <li>Jika diambil orang lain, wajib tunjukkan form order dan foto buket</li>
+              </ul>
             </div>
-          </div>
-
-          {/* Upload Bukti Transfer */}
-          <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2">Upload Bukti Transfer (Max 5 foto)</label>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(e) => handleFileChange(e, 'payment')}
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary"
-            />
-            <p className="text-xs text-gray-500 mt-1">Upload foto/screenshot bukti transfer pembayaran</p>
-            {paymentFiles.length > 0 && (
-              <p className="text-sm text-green-600 mt-2">✓ {paymentFiles.length} foto terpilih</p>
-            )}
-          </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading || uploading}
-            className="w-full bg-primary hover:bg-pink-600 text-white font-bold py-4 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {uploading ? 'Mengupload gambar...' : loading ? 'Memproses pesanan...' : 'Buat Pesanan'}
-          </button>
-        </form>
+          </aside>
+        </div>
       </div>
     </div>
   );
