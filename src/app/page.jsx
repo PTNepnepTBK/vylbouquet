@@ -1,51 +1,70 @@
 import Link from 'next/link'
-import { ShoppingBagIcon, SparklesIcon, HeartIcon } from '@heroicons/react/24/outline'
+import { ShoppingBagIcon, SparklesIcon, HeartIcon, ArrowDownLeftIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
+import NavBar from '../components/ui/NavBar'
 
 export default function Home() {
   return (
-    <main className="min-h-screen">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-br from-pink-50 to-purple-50 min-h-screen flex items-center justify-center px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6">
-            vyl<span className="text-primary">.bouquet</span>
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-600 mb-8">
-            Buket Cantik untuk Semua Momen ✨
-          </p>
-          
-          <Link 
-            href="/catalog"
-            className="inline-flex items-center gap-2 bg-primary hover:bg-pink-600 text-white font-semibold px-8 py-4 rounded-full text-lg transition-all transform hover:scale-105 shadow-lg"
-          >
-            <ShoppingBagIcon className="w-6 h-6" />
-            Pesan Sekarang
-          </Link>
+    <main className="h-screen overflow-hidden relative">
+      {/* Background image (full screen) */}
+      <div
+        className="absolute inset-0 bg-center bg-cover blur-sm brightness-90"
+        style={{
+          backgroundImage:
+            "url('https://images.unsplash.com/photo-1501004318641-b39e6451bec6?q=80&w=2000&auto=format&fit=crop&ixlib=rb-4.0.3&s=1b5a9f7f5e3a2a4c2d9e4c2a6b7f7b6e')",
+        }}
+      />
+      {/* Subtle overlay to improve text contrast */}
+      <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-transparent to-white/70" />
 
-          {/* Cara Order */}
-          <div className="mt-16 grid md:grid-cols-3 gap-8 text-left">
-            <div className="bg-white p-6 rounded-2xl shadow-md">
-              <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center mb-4">
-                <SparklesIcon className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="font-bold text-lg mb-2">1. Pilih Buket</h3>
-              <p className="text-gray-600">Lihat katalog dan pilih buket favorit Anda</p>
+      {/* Navbar (over content) */}
+      <div className="relative z-20">
+        <NavBar />
+      </div>
+
+      {/* Main Contents */}
+        <div className="relative z-10 max-w-8xl px-6 my-8 lg:px-8 h-full flex items-center ml-[65px]">
+          <div className="w-full">
+            {/* Left: Text */}
+          <div className="text-left">
+            <span className="inline-block bg-white/80 backdrop-blur rounded-2xl px-4 py-2 text-pink-600 font-regular drop-shadow-md mb-6">Toko Bucket Terpercaya</span>
+
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-gray-900">
+              Rangkaian Bunga
+              <br />
+              <span className="text-pink-400">Elegan</span> untuk Momen
+              <br />
+              Istimewa
+            </h1>
+
+            <p className="mt-6 text-lg text-amber-700 max-w-xl">
+              Pesan buket bunga segar dengan mudah. Custom design, kualitas premium, dan pelayanan terbaik untuk setiap momen spesial Anda.
+            </p>
+
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Link href="/order" className="inline-flex items-center gap-3 bg-pink-400 hover:bg-pink-500 text-white font-semibold px-6 py-3 rounded-2xl shadow-md transition">
+                <ShoppingBagIcon className="w-5 h-5" />
+                Pesan Sekarang
+              </Link>
+
+              <Link href="/catalog" className="inline-flex items-center gap-3 border border-gray-900 text-gray-900 px-6 py-3 rounded-2xl hover:shadow focus:outline-none">
+                Lihat Katalog
+                <ArrowRightIcon className="w-5 h-5" />
+              </Link>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-md">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-4">
-                <HeartIcon className="w-6 h-6 text-secondary" />
+            <div className="mt-8 grid grid-cols-3 gap-4 max-w-lg">
+              <div className="flex items-center gap-3">
+                <SparklesIcon className="w-5 h-5 text-pink-400" />
+                <span className="text-sm">100+ Pelanggan Puas</span>
               </div>
-              <h3 className="font-bold text-lg mb-2">2. Isi Data Pesanan</h3>
-              <p className="text-gray-600">Lengkapi form dengan detail pesanan Anda</p>
-            </div>
-
-            <div className="bg-white p-6 rounded-2xl shadow-md">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <ShoppingBagIcon className="w-6 h-6 text-green-600" />
+              <div className="flex items-center gap-3">
+                <HeartIcon className="w-5 h-5 text-rose-400" />
+                <span className="text-sm">Bunga Segar Premium</span>
               </div>
-              <h3 className="font-bold text-lg mb-2">3. Lakukan Pembayaran</h3>
-              <p className="text-gray-600">Transfer dan upload bukti pembayaran</p>
+              <div className="flex items-center gap-3">
+                <ShoppingBagIcon className="w-5 h-5 text-emerald-500" />
+                <span className="text-sm">DP 30% Saja</span>
+              </div>
             </div>
           </div>
         </div>
