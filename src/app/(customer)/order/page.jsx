@@ -4,11 +4,13 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import NavBar from '../../../components/ui/NavBar';
+import { useToast } from '../../../hooks/useToast';
 
 export default function OrderPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const bouquetIdParam = searchParams.get('bouquet_id');
+  const showToast = useToast(); // Toast notifications
 
   const [bouquets, setBouquets] = useState([]);
   const [settings, setSettings] = useState(null);
@@ -104,7 +106,7 @@ export default function OrderPage() {
       if (data && data.success) return data.urls || [];
       throw new Error((data && data.message) || 'Upload failed');
     } catch (error) {
-      alert(`Error uploading ${type} images: ${error?.message || error}`);
+      showToast.error(`Gagal upload gambar ${type}: ${error?.message || error}`);
       return [];
     } finally {
       setUploading(false);
@@ -115,7 +117,7 @@ export default function OrderPage() {
     e.preventDefault();
 
     if (!paymentFiles || paymentFiles.length === 0) {
-      alert('Harap upload bukti transfer/DP terlebih dahulu');
+      showToast.error('Harap upload bukti transfer/DP terlebih dahulu');
       return;
     }
 
@@ -154,10 +156,10 @@ export default function OrderPage() {
         console.warn('Could not save lastOrder', err);
       }
 
-      alert(`Pesanan berhasil dibuat!\nNomor Order: ${saved.order_number || saved.id || ''}`);
+      showToast.success(`Pesanan berhasil! Nomor Order: ${saved.order_number || saved.id || ''}`);
       router.push('/order-success');
     } catch (error) {
-      alert(`Error: ${error?.message || error}`);
+      showToast.error(`Error: ${error?.message || error}`);
     } finally {
       setLoading(false);
     }

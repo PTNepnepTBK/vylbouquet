@@ -2,8 +2,10 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
+import { useToast } from '../../hooks/useToast';
 
 export default function ImageUpload({ value, onChange, disabled = false }) {
+  const showToast = useToast(); // Toast notifications
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(value || null);
   const fileInputRef = useRef(null);
@@ -15,14 +17,14 @@ export default function ImageUpload({ value, onChange, disabled = false }) {
     // Validasi tipe file
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      alert('Format file tidak didukung. Gunakan JPG, PNG, atau WEBP');
+      showToast.error('Format file tidak didukung. Gunakan JPG, PNG, atau WEBP');
       return;
     }
 
     // Validasi ukuran (max 2MB)
     const maxSize = 2 * 1024 * 1024;
     if (file.size > maxSize) {
-      alert('Ukuran file terlalu besar. Maksimal 2MB');
+      showToast.error('Ukuran file terlalu besar. Maksimal 2MB');
       return;
     }
 
@@ -54,7 +56,7 @@ export default function ImageUpload({ value, onChange, disabled = false }) {
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Gagal upload gambar: ' + error.message);
+      showToast.error('Gagal upload gambar: ' + error.message);
       setPreview(null);
     } finally {
       setUploading(false);

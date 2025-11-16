@@ -5,8 +5,10 @@ import Modal from '../ui/Modal';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import ImageUpload from './ImageUpload';
+import { useToast } from '../../hooks/useToast';
 
 export default function BouquetModal({ isOpen, onClose, mode = 'create', bouquet = null, onSuccess }) {
+  const showToast = useToast(); // Toast notifications
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -56,12 +58,12 @@ export default function BouquetModal({ isOpen, onClose, mode = 'create', bouquet
 
     // Validasi
     if (!formData.name.trim()) {
-      alert('Nama buket harus diisi');
+      showToast.error('Nama buket harus diisi');
       return;
     }
 
-    if (!formData.price || isNaN(formData.price) || formData.price <= 0) {
-      alert('Harga harus diisi dengan angka yang valid');
+    if (!formData.price || isNaN(parseFloat(formData.price))) {
+      showToast.error('Harga harus diisi dengan angka yang valid');
       return;
     }
 
@@ -85,7 +87,7 @@ export default function BouquetModal({ isOpen, onClose, mode = 'create', bouquet
       const data = await response.json();
 
       if (data.success) {
-        alert(data.message);
+        showToast.success(mode === 'create' ? 'Buket berhasil ditambahkan' : 'Buket berhasil diupdate');
         onSuccess?.();
         onClose();
       } else {
@@ -93,7 +95,7 @@ export default function BouquetModal({ isOpen, onClose, mode = 'create', bouquet
       }
     } catch (error) {
       console.error('Submit error:', error);
-      alert('Terjadi kesalahan: ' + error.message);
+      showToast.error('Terjadi kesalahan: ' + error.message);
     } finally {
       setLoading(false);
     }

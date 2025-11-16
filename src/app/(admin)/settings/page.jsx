@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
+import { useToast } from '../../../hooks/useToast';
 
 export default function SettingsPage() {
+  const showToast = useToast(); // Toast notifications
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
@@ -41,7 +43,7 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Fetch settings error:', error);
-      alert('Gagal memuat pengaturan');
+      showToast.error('Gagal memuat pengaturan');
     } finally {
       setLoading(false);
     }
@@ -66,12 +68,12 @@ export default function SettingsPage() {
 
     // Validasi
     if (!settings.bank_bca && !settings.bank_seabank && !settings.ewallet_shopeepay) {
-      alert('Minimal satu metode pembayaran harus diisi');
+      showToast.error('Minimal satu metode pembayaran harus diisi');
       return;
     }
 
     if (settings.min_dp_percent && (isNaN(settings.min_dp_percent) || settings.min_dp_percent < 0 || settings.min_dp_percent > 100)) {
-      alert('Minimal DP harus antara 0-100%');
+      showToast.error('Minimal DP harus antara 0-100%');
       return;
     }
 
@@ -88,13 +90,13 @@ export default function SettingsPage() {
       const data = await response.json();
 
       if (data.success) {
-        alert('Pengaturan berhasil disimpan');
+        showToast.success('Pengaturan berhasil disimpan');
       } else {
         throw new Error(data.message);
       }
     } catch (error) {
       console.error('Save settings error:', error);
-      alert('Gagal menyimpan pengaturan: ' + error.message);
+      showToast.error('Gagal menyimpan pengaturan: ' + error.message);
     } finally {
       setSaving(false);
     }

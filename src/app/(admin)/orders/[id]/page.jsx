@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { useToast } from '../../../../hooks/useToast';
 
 export default function OrderDetailPage({ params }) {
   const router = useRouter();
+  const showToast = useToast(); // Toast notifications
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -24,11 +26,11 @@ export default function OrderDetailPage({ params }) {
       if (data.success) {
         setOrder(data.data);
       } else {
-        alert('Error: ' + data.message);
+        showToast.error('Error: ' + data.message);
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Gagal memuat detail pesanan');
+      showToast.error('Gagal memuat detail pesanan');
     } finally {
       setLoading(false);
     }
@@ -47,14 +49,14 @@ export default function OrderDetailPage({ params }) {
       
       const data = await response.json();
       if (data.success) {
-        alert('Status berhasil diupdate!');
+        showToast.success('Status berhasil diupdate!');
         fetchOrderDetail();
       } else {
-        alert('Error: ' + data.message);
+        showToast.error('Error: ' + data.message);
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Gagal update status');
+      showToast.error('Gagal update status');
     } finally {
       setUpdating(false);
     }
@@ -73,14 +75,14 @@ export default function OrderDetailPage({ params }) {
       
       const data = await response.json();
       if (data.success) {
-        alert('Pembayaran ditandai lunas!');
+        showToast.success('Pembayaran ditandai lunas!');
         fetchOrderDetail();
       } else {
-        alert('Error: ' + data.message);
+        showToast.error('Error: ' + data.message);
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Gagal update pembayaran');
+      showToast.error('Gagal update pembayaran');
     } finally {
       setUpdating(false);
     }

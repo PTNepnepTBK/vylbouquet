@@ -5,11 +5,13 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import SearchBar from '@/components/ui/SearchBar';
 import FilterSelect from '@/components/ui/FilterSelect';
+import { useToast } from '@/hooks/useToast';
 // jsPDF and jspdf-autotable are loaded dynamically inside `exportToPDF`
 // to avoid build-time resolution errors and SSR issues.
 
 export default function OrdersPage() {
   const { user } = useAuth();
+  const showToast = useToast(); // Toast notifications
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -190,7 +192,7 @@ export default function OrdersPage() {
       doc.save(`laporan-pesanan-${timestamp2}.pdf`);
     } catch (err) {
       console.error('PDF export failed:', err);
-      alert('Gagal mengekspor PDF. Pastikan dependency "jspdf" dan "jspdf-autotable" sudah terpasang.');
+      showToast.error('Gagal mengekspor PDF. Pastikan dependency "jspdf" dan "jspdf-autotable" sudah terpasang.');
     }
   };
 

@@ -6,8 +6,10 @@ import BouquetModal from '../../../components/admin/BouquetModal';
 import SearchBar from '../../../components/ui/SearchBar';
 import FilterSelect from '../../../components/ui/FilterSelect';
 import StatsCard from '../../../components/ui/StatsCard';
+import { useToast } from '../../../hooks/useToast';
 
 export default function BouquetsPage() {
+  const showToast = useToast(); // Toast notifications
   const [bouquets, setBouquets] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -46,7 +48,7 @@ export default function BouquetsPage() {
       }
     } catch (error) {
       console.error('Fetch bouquets error:', error);
-      alert('Gagal memuat data buket');
+      showToast.error('Gagal memuat data buket');
     } finally {
       setLoading(false);
     }
@@ -85,7 +87,7 @@ export default function BouquetsPage() {
       const data = await response.json();
 
       if (data.success) {
-        alert('Buket berhasil dihapus');
+        showToast.success('Buket berhasil dihapus');
         fetchStats();
         fetchBouquets();
       } else {
@@ -93,7 +95,7 @@ export default function BouquetsPage() {
       }
     } catch (error) {
       console.error('Delete error:', error);
-      alert('Gagal menghapus buket: ' + error.message);
+      showToast.error('Gagal menghapus buket: ' + error.message);
     }
   };
 
