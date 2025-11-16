@@ -44,7 +44,7 @@ export default function CatalogPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-amber-50 py-12 px-4">
+      <div className="min-h-screen py-12 px-4">
         <div className="max-w-6xl mx-auto text-center">
           <p className="text-gray-600">Memuat katalog...</p>
         </div>
@@ -53,7 +53,7 @@ export default function CatalogPage() {
   }
 
   return (
-    <div className="min-h-screen bg-amber-50 pt-24 pb-12 px-4">
+    <div className="min-h-screen pt-24 pb-12 px-4 font-serif">
       <div className="relative z-20">
         <NavBar />
       </div>

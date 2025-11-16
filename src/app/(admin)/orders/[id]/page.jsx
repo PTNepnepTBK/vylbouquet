@@ -320,24 +320,56 @@ export default function OrderDetailPage({ params }) {
             </div>
           )}
 
-          {/* Bouquet Image from Catalog */}
-          {order.bouquet && order.bouquet.image_url && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold mb-4">Buket dari Katalog</h2>
-              <div>
-                <p className="text-sm text-gray-500 mb-2">{order.bouquet.name}</p>
-                <div className="relative h-64 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-pink-200">
-                  <Image 
-                    src={order.bouquet.image_url} 
-                    alt={order.bouquet.name}
-                    fill
-                    className="object-cover"
-                    onClick={() => window.open(order.bouquet.image_url, '_blank')}
-                  />
+          {/* Gambar Buket Yang Diinginkan (ambil dari order.images dengan image_type 'DESIRED_BOUQUET') */}
+          {(() => {
+            const desiredImgs = (order.images || []).filter(img => img.image_type === 'DESIRED_BOUQUET');
+            if (desiredImgs.length > 0) {
+              return (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-xl font-bold mb-4">Pesanan Buket Customer</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {desiredImgs.map((img, idx) => (
+                      <div key={img.id || idx}>
+                        <p className="text-sm text-gray-500 mb-2">{idx + 1}. Foto Buket yang Diinginkan</p>
+                        <div className="relative h-64 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-pink-200">
+                          <Image
+                            src={img.image_url}
+                            alt={img.caption || `Buket Diinginkan ${idx + 1}`}
+                            fill
+                            className="object-cover"
+                            onClick={() => window.open(img.image_url, '_blank')}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              );
+            }
+
+            // Fallback to bouquet image if no desired images uploaded
+            if (order.bouquet && order.bouquet.image_url) {
+              return (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-xl font-bold mb-4">Pesanan Buket</h2>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">{order.bouquet.name}</p>
+                    <div className="relative h-64 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-pink-200">
+                      <Image
+                        src={order.bouquet.image_url}
+                        alt={order.bouquet.name}
+                        fill
+                        className="object-cover"
+                        onClick={() => window.open(order.bouquet.image_url, '_blank')}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
+          })()}
         </div>
 
         {/* Actions Sidebar */}

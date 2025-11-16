@@ -7,6 +7,9 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        serif: ['"Playfair Display"', 'serif'],
+      },
       colors: {
         primary: "#ec4899", // Pink untuk buket
         secondary: "#8b5cf6", // Purple

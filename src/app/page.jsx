@@ -10,7 +10,7 @@ export default function Home() {
         className="absolute inset-0 bg-center bg-cover blur-sm brightness-90"
         style={{
           backgroundImage:
-            "url('https://images.unsplash.com/photo-1501004318641-b39e6451bec6?q=80&w=2000&auto=format&fit=crop&ixlib=rb-4.0.3&s=1b5a9f7f5e3a2a4c2d9e4c2a6b7f7b6e')",
+            "url('/bg_image.jpg')",
         }}
       />
       {/* Subtle overlay to improve text contrast */}
@@ -22,11 +22,10 @@ export default function Home() {
       </div>
 
       {/* Main Contents */}
-        <div className="relative z-10 max-w-8xl px-6 my-8 lg:px-8 h-full flex items-center ml-[65px]">
+        <div className="relative z-10 max-w-8xl px-6 my-8 lg:px-8 h-full flex items-center ml-[65px] font-serif">
           <div className="w-full">
             {/* Left: Text */}
           <div className="text-left">
-            <span className="inline-block bg-white/80 backdrop-blur rounded-2xl px-4 py-2 text-pink-600 font-regular drop-shadow-md mb-6">Toko Bucket Terpercaya</span>
 
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-gray-900">
               Rangkaian Bunga
@@ -36,7 +35,7 @@ export default function Home() {
               Istimewa
             </h1>
 
-            <p className="mt-6 text-lg text-amber-700 max-w-xl">
+            <p className="mt-6 text-lg text-black max-w-xl">
               Pesan buket bunga segar dengan mudah. Custom design, kualitas premium, dan pelayanan terbaik untuk setiap momen spesial Anda.
             </p>
 

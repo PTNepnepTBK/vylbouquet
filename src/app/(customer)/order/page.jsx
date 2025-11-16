@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import NavBar from '../../../components/ui/NavBar';
@@ -11,6 +11,7 @@ export default function OrderPage() {
   const bouquetIdParam = searchParams.get('bouquet_id');
 
   const [bouquets, setBouquets] = useState([]);
+  const [settings, setSettings] = useState(null);
   const [selectedBouquet, setSelectedBouquet] = useState(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -33,7 +34,21 @@ export default function OrderPage() {
   const [desiredBouquetFiles, setDesiredBouquetFiles] = useState([]);
 
   useEffect(() => {
-    fetchBouquets();
+    // Load bouquets and settings in parallel for faster startup
+    const loadInitial = async () => {
+      try {
+        const [bouqRes, setRes] = await Promise.all([fetch('/api/bouquets'), fetch('/api/settings')]);
+        const bouqJson = await bouqRes.json().catch(() => null);
+        const setJson = await setRes.json().catch(() => null);
+
+        if (bouqJson && bouqJson.success) setBouquets(bouqJson.data.filter(b => b.is_active));
+        if (setJson && setJson.success) setSettings(setJson.data || {});
+      } catch (err) {
+        console.warn('Initial load failed', err);
+      }
+    };
+
+    loadInitial();
   }, []);
 
   useEffect(() => {
@@ -60,42 +75,36 @@ export default function OrderPage() {
 
   const handleBouquetChange = (e) => {
     const bouquetId = e.target.value;
-    setFormData({ ...formData, bouquet_id: bouquetId });
+    setFormData(prev => ({ ...prev, bouquet_id: bouquetId }));
     const bouquet = bouquets.find(b => b.id === parseInt(bouquetId));
     setSelectedBouquet(bouquet);
   };
 
   const handleFileChange = (e, type) => {
-    const files = Array.from(e.target.files);
-    if (type === 'reference') {
-      setReferenceFiles(files);
-    } else if (type === 'payment') {
-      setPaymentFiles(files);
-    } else if (type === 'desired') {
-      setDesiredBouquetFiles(files);
-    }
+    const files = Array.from(e.target.files || []);
+    if (type === 'reference') setReferenceFiles(files);
+    else if (type === 'payment') setPaymentFiles(files);
+    else if (type === 'desired') setDesiredBouquetFiles(files);
   };
 
   const uploadFiles = async (files, type) => {
-    if (files.length === 0) return [];
+    if (!files || files.length === 0) return [];
 
     setUploading(true);
-    const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
-    formData.append('type', 'orders');
+    const fd = new FormData();
+    files.forEach(file => fd.append('files', file));
+    fd.append('type', 'orders');
 
     try {
       const response = await fetch('/api/upload/multiple', {
         method: 'POST',
-        body: formData,
+        body: fd,
       });
-      const data = await response.json();
-      if (data.success) {
-        return data.urls;
-      }
-      throw new Error(data.message);
+      const data = await response.json().catch(() => null);
+      if (data && data.success) return data.urls || [];
+      throw new Error((data && data.message) || 'Upload failed');
     } catch (error) {
-      alert(`Error uploading ${type} images: ${error.message}`);
+      alert(`Error uploading ${type} images: ${error?.message || error}`);
       return [];
     } finally {
       setUploading(false);
@@ -104,26 +113,21 @@ export default function OrderPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate payment proof
-    if (paymentFiles.length === 0) {
+
+    if (!paymentFiles || paymentFiles.length === 0) {
       alert('Harap upload bukti transfer/DP terlebih dahulu');
       return;
     }
-    
+
     setLoading(true);
-
     try {
-      // Upload desired bouquet images
-      const desiredUrls = await uploadFiles(desiredBouquetFiles, 'desired');
-      
-      // Upload reference images
-      const refUrls = await uploadFiles(referenceFiles, 'reference');
-      
-      // Upload payment proof images
-      const payUrls = await uploadFiles(paymentFiles, 'payment');
+      // Run uploads in parallel
+      const [desiredUrls, refUrls, payUrls] = await Promise.all([
+        uploadFiles(desiredBouquetFiles, 'desired'),
+        uploadFiles(referenceFiles, 'reference'),
+        uploadFiles(paymentFiles, 'payment'),
+      ]);
 
-      // Create order
       const orderData = {
         ...formData,
         desired_bouquet_images: desiredUrls,
@@ -137,16 +141,23 @@ export default function OrderPage() {
         body: JSON.stringify(orderData),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
+      if (!data) throw new Error('Response tidak valid');
+      if (!data.success) throw new Error(data.message || 'Gagal membuat pesanan');
 
-      if (data.success) {
-        alert(`Pesanan berhasil dibuat!\nNomor Order: ${data.data.order_number}`);
-        router.push('/order-success');
-      } else {
-        throw new Error(data.message);
+      const saved = data.data || data;
+      try {
+        localStorage.setItem('lastOrder', JSON.stringify(saved));
+        const idKey = saved?.order_number || saved?.id || saved?.order_id || '';
+        if (idKey) localStorage.setItem('lastOrderId', String(idKey));
+      } catch (err) {
+        console.warn('Could not save lastOrder', err);
       }
+
+      alert(`Pesanan berhasil dibuat!\nNomor Order: ${saved.order_number || saved.id || ''}`);
+      router.push('/order-success');
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      alert(`Error: ${error?.message || error}`);
     } finally {
       setLoading(false);
     }
@@ -160,18 +171,16 @@ export default function OrderPage() {
     }).format(price);
   };
 
-  const calculatePayment = () => {
+  const payment = useMemo(() => {
     if (!selectedBouquet) return { dp: 0, remaining: 0, total: 0 };
-    const total = parseFloat(selectedBouquet.price);
+    const total = parseFloat(selectedBouquet.price) || 0;
     const dp = formData.payment_type === 'DP' ? total * 0.3 : total;
     const remaining = formData.payment_type === 'DP' ? total - dp : 0;
     return { dp, remaining, total };
-  };
-
-  const payment = calculatePayment();
+  }, [selectedBouquet, formData.payment_type]);
 
   return (
-    <div className="min-h-screen bg-amber-50 py-12 px-4">
+    <div className="min-h-screen py-12 px-4 font-serif">
       <div className="relative z-20">
         <NavBar />
       </div>
@@ -184,7 +193,7 @@ export default function OrderPage() {
           {/* Left: Form (span 2 columns on large) */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-6 lg:p-8 border border-pink-100">
-              <div className="text-lg font-semibold mb-4 px-2">Detail Pesanan</div>
+              <div className="text-lg font-semibold mb-4">Detail Pesanan</div>
 
               {/* Pilih Buket */}
               <div className="mb-4">
@@ -293,9 +302,15 @@ export default function OrderPage() {
             <div className="p-4 bg-white rounded-lg border border-pink-200">
               <h3 className="font-semibold mb-2">Metode Pembayaran</h3>
               <div className="text-sm space-y-2">
-                <div><strong>BCA:</strong> 4370321906 a.n Vina Enjelia</div>
-                <div><strong>SeaBank:</strong> 901081198646 a.n Vina Enjelia</div>
-                <div><strong>ShopePay:</strong> 0882002048431 a.n Vina Enjelia</div>
+                <div>
+                  <strong>BCA:</strong> {settings?.bank_bca || '—'}{settings?.bank_bca_name ? ` a.n ${settings.bank_bca_name}` : ''}
+                </div>
+                <div>
+                  <strong>SeaBank:</strong> {settings?.bank_seabank || '—'}{settings?.bank_seabank_name ? ` a.n ${settings.bank_seabank_name}` : ''}
+                </div>
+                <div>
+                  <strong>ShopePay:</strong> {settings?.ewallet_shopeepay || '—'}{settings?.ewallet_shopeepay_name ? ` a.n ${settings.ewallet_shopeepay_name}` : ''}
+                </div>
                 <p className="text-xs text-pink-400 mt-2">Transfer dari bank dikenakan biaya admin +Rp 1.000</p>
               </div>
             </div>

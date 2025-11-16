@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import SearchBar from '@/components/ui/SearchBar';
 import FilterSelect from '@/components/ui/FilterSelect';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// jsPDF and jspdf-autotable are loaded dynamically inside `exportToPDF`
+// to avoid build-time resolution errors and SSR issues.
 
 export default function OrdersPage() {
   const { user } = useAuth();
@@ -89,100 +89,109 @@ export default function OrdersPage() {
     return 'Belum Lunas';
   };
 
-  const exportToPDF = () => {
-    const doc = new jsPDF();
+  const exportToPDF = async () => {
+    try {
+      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable')
+      ]);
 
-    // Add title
-    doc.setFontSize(18);
-    doc.text('Laporan Pesanan Vyl Buket', 14, 15);
-    
-    // Add date
-    doc.setFontSize(10);
-    const timestamp = new Date().toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-    doc.text(`Tanggal Cetak: ${timestamp}`, 14, 22);
+      const doc = new jsPDF();
 
-    // Prepare table data
-    const tableData = filteredOrders.map(order => {
-      const totalPrice = parseFloat(order.bouquet_price || 0);
-      const remaining = parseFloat(order.remaining_amount || 0);
-      const dpAmount = parseFloat(order.dp_amount || 0);
-      const totalPaid = parseFloat(order.total_paid || 0);
+      // Add title
+      doc.setFontSize(18);
+      doc.text('Laporan Pesanan Vyl Buket', 14, 15);
+      
+      // Add date
+      doc.setFontSize(10);
+      const timestamp = new Date().toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      doc.text(`Tanggal Cetak: ${timestamp}`, 14, 22);
 
-      return [
-        `#${order.id}`,
-        order.customer_name || '',
-        order.sender_phone || '',
-        order.bouquet?.name || 'Custom',
-        formatPrice(totalPrice),
-        order.payment_type === 'DP' ? 'DP' : 'Lunas',
-        formatPrice(dpAmount),
-        formatPrice(remaining),
-        getStatusLabel(order.order_status),
-        formatDate(order.pickup_date)
-      ];
-    });
+      // Prepare table data
+      const tableData = filteredOrders.map(order => {
+        const totalPrice = parseFloat(order.bouquet_price || 0);
+        const remaining = parseFloat(order.remaining_amount || 0);
+        const dpAmount = parseFloat(order.dp_amount || 0);
 
-    // Add table
-    autoTable(doc, {
-      startY: 28,
-      head: [[
-        'ID',
-        'Pembeli',
-        'WhatsApp',
-        'Buket',
-        'Harga',
-        'Tipe',
-        'DP',
-        'Sisa',
-        'Status',
-        'Ambil'
-      ]],
-      body: tableData,
-      theme: 'striped',
-      styles: { 
-        fontSize: 8,
-        cellPadding: 2
-      },
-      headStyles: { 
-        fillColor: [139, 92, 246],
-        fontStyle: 'bold'
-      },
-      columnStyles: {
-        0: { cellWidth: 12 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 25 },
-        4: { cellWidth: 20 },
-        5: { cellWidth: 15 },
-        6: { cellWidth: 18 },
-        7: { cellWidth: 18 },
-        8: { cellWidth: 22 },
-        9: { cellWidth: 18 }
+        return [
+          `#${order.id}`,
+          order.customer_name || '',
+          order.sender_phone || '',
+          order.bouquet?.name || 'Custom',
+          formatPrice(totalPrice),
+          order.payment_type === 'DP' ? 'DP' : 'Lunas',
+          formatPrice(dpAmount),
+          formatPrice(remaining),
+          getStatusLabel(order.order_status),
+          formatDate(order.pickup_date)
+        ];
+      });
+
+      // Add table
+      autoTable(doc, {
+        startY: 28,
+        head: [[
+          'ID',
+          'Pembeli',
+          'WhatsApp',
+          'Buket',
+          'Harga',
+          'Tipe',
+          'DP',
+          'Sisa',
+          'Status',
+          'Ambil'
+        ]],
+        body: tableData,
+        theme: 'striped',
+        styles: { 
+          fontSize: 8,
+          cellPadding: 2
+        },
+        headStyles: { 
+          fillColor: [139, 92, 246],
+          fontStyle: 'bold'
+        },
+        columnStyles: {
+          0: { cellWidth: 12 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 20 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 20 },
+          5: { cellWidth: 15 },
+          6: { cellWidth: 18 },
+          7: { cellWidth: 18 },
+          8: { cellWidth: 22 },
+          9: { cellWidth: 18 }
+        }
+      });
+
+      // Add footer
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.text(
+          `Halaman ${i} dari ${pageCount}`,
+          doc.internal.pageSize.width / 2,
+          doc.internal.pageSize.height - 10,
+          { align: 'center' }
+        );
       }
-    });
 
-    // Add footer
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.text(
-        `Halaman ${i} dari ${pageCount}`,
-        doc.internal.pageSize.width / 2,
-        doc.internal.pageSize.height - 10,
-        { align: 'center' }
-      );
+      // Save PDF
+      const timestamp2 = new Date().toISOString().split('T')[0];
+      doc.save(`laporan-pesanan-${timestamp2}.pdf`);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      alert('Gagal mengekspor PDF. Pastikan dependency "jspdf" dan "jspdf-autotable" sudah terpasang.');
     }
-
-    // Save PDF
-    const timestamp2 = new Date().toISOString().split('T')[0];
-    doc.save(`laporan-pesanan-${timestamp2}.pdf`);
   };
 
   // Filter orders
@@ -265,79 +274,71 @@ export default function OrdersPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50\">
+            <table className="w-full table-fixed">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
-                    ID Order
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 w-20">
+                    <div className="truncate">ID</div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
-                    Nama Pembeli
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 w-48">
+                    <div className="truncate">Nama Pembeli</div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
-                    Buket
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 w-44">
+                    <div className="truncate">Buket</div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
-                    Harga Total
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 w-32">
+                    <div className="truncate">Harga Total</div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
-                    Jenis Pembayaran
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 w-36">
+                    <div className="truncate">Jenis Pembayaran</div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
-                    Sisa Pelunasan
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 w-28">
+                    <div className="truncate">Sisa</div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
-                    Status Pesanan
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 w-40">
+                    <div className="truncate">Status Pesanan</div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
-                    Status Pembayaran
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 w-36">
+                    <div className="truncate">Status Pembayaran</div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
-                    Aksi
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 w-28">
+                    <div className="truncate">Aksi</div>
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">{filteredOrders.map((order) => {
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {filteredOrders.map((order) => {
                   const totalPrice = parseFloat(order.bouquet_price || 0);
                   const remaining = parseFloat(order.remaining_amount || 0);
 
                   return (
                     <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">#{order.id}</div>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-gray-900 truncate">#{order.id}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{order.customer_name}</div>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900 truncate" title={order.customer_name}>{order.customer_name}</div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-700">
-                          {order.bouquet?.name || 'Custom'}
-                        </div>
+                      <td className="px-3 py-3">
+                        <div className="text-sm text-gray-700 truncate" title={order.bouquet?.name}>{order.bouquet?.name || 'Custom'}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 py-3 whitespace-nowrap">
                         <div className="text-sm font-semibold text-gray-900">{formatPrice(totalPrice)}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-700">
-                          {order.payment_type === 'DP' ? `DP (${formatPrice(order.dp_amount)})` : 'Lunas'}
-                        </div>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <div className="text-sm text-gray-700 truncate">{order.payment_type === 'DP' ? `DP (${formatPrice(order.dp_amount)})` : 'Lunas'}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className={`text-sm font-semibold ${remaining > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                          {remaining > 0 ? formatPrice(remaining) : '-'}
-                        </div>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <div className={`text-sm font-semibold ${remaining > 0 ? 'text-orange-600' : 'text-green-600'}`}>{remaining > 0 ? formatPrice(remaining) : '-'}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 py-3 whitespace-nowrap">
                         {getStatusBadge(order.order_status)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 py-3 whitespace-nowrap">
                         {getPaymentBadge(order.payment_status, remaining)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <Link 
-                          href={`/orders/${order.id}`}
-                          className="text-primary hover:text-pink-600 font-semibold transition-colors inline-flex items-center gap-1"
-                        >
+                      <td className="px-3 py-3 whitespace-nowrap text-sm">
+                        <Link href={`/orders/${order.id}`} className="text-primary hover:text-pink-600 font-semibold transition-colors inline-flex items-center gap-1">
                           Detail
                           <span>→</span>
                         </Link>

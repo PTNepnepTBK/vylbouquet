@@ -21,7 +21,7 @@ export default function NavBar() {
   }
 
   return (
-    <header className="fixed top-0 left-0 w-full z-50 bg-white/30 backdrop-blur-md backdrop-saturate-150 shadow-sm transition-colors">
+    <header className="fixed top-0 left-0 w-full z-50 bg-white/30 backdrop-blur-md backdrop-saturate-150 shadow-sm transition-colors font-serif">
       <nav className="relative">
         <div className="max-w-7xl mx-auto px-6">
           <div className="relative flex items-center h-20">

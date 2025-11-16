@@ -146,29 +146,56 @@ export default function SettingsPage() {
               name="bank_bca"
               value={settings.bank_bca}
               onChange={handleChange}
-              placeholder="4373021906 a.n Vina Enjelia"
+              placeholder="3741159803"
+            />
+          </div>
+          <div className="my-1">
+            <Input
+              label="Nama"
+              name="bank_bca_name"
+              value={settings.bank_bca_name}
+              onChange={handleChange}
+              placeholder="Muhammad Nashirul Haq Resa"
             />
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Rekening SeaBank</h3>
+            <h3 className="font-semibold text-gray-900 my-3">Rekening SeaBank</h3>
             <Input
               label="Rekening SeaBank"
               name="bank_seabank"
               value={settings.bank_seabank}
               onChange={handleChange}
-              placeholder="901081198646 a.n Vina Enjelia"
+              placeholder="901763996563"
+            />
+          </div>
+          <div className="my-1">
+            <Input
+              label="Nama"
+              name="bank_seabank_name"
+              value={settings.bank_seabank_name}
+              onChange={handleChange}
+              placeholder="Muhammad Nashirul Haq Resa"
             />
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Nomor ShopeePay</h3>
+            <h3 className="font-semibold text-gray-900 my-3">Nomor ShopeePay</h3>
             <Input
               label="Nomor ShopeePay"
               name="ewallet_shopeepay"
               value={settings.ewallet_shopeepay}
               onChange={handleChange}
-              placeholder="0882002048431 a.n Vina Enjelia"
+              placeholder="085161553414"
+            />
+          </div>
+          <div className="my-1">
+            <Input
+              label="Nama"
+              name="ewallet_shopeepay_name"
+              value={settings.ewallet_shopeepay_name}
+              onChange={handleChange}
+              placeholder="Muhammad Nashirul Haq Resa"
             />
           </div>
 
