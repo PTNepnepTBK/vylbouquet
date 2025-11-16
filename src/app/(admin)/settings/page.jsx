@@ -112,15 +112,15 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Pengaturan Pembayaran & Ketentuan</h1>
-        <p className="text-gray-600 mt-1 text-sm">Kelola informasi pembayaran dan ketentuan pemesanan</p>
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Pengaturan Pembayaran & Ketentuan</h1>
+        <p className="text-gray-600 mt-1 text-xs sm:text-sm">Kelola informasi pembayaran dan ketentuan pemesanan</p>
       </div>
       
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* DP Settings */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Pengaturan DP</h2>
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Pengaturan DP</h2>
           
           <div>
             <Input
@@ -138,11 +138,11 @@ export default function SettingsPage() {
         </div>
 
         {/* Payment Methods */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Metode Pembayaran</h2>
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Metode Pembayaran</h2>
           
           <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Rekening BCA</h3>
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3">Rekening BCA</h3>
             <Input
               label="Rekening BCA"
               name="bank_bca"
@@ -182,7 +182,7 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-900 my-3">Nomor ShopeePay</h3>
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 my-3">Nomor ShopeePay</h3>
             <Input
               label="Nomor ShopeePay"
               name="ewallet_shopeepay"
@@ -214,11 +214,11 @@ export default function SettingsPage() {
         </div>
 
         {/* Operational Hours */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Jam Operasional</h2>
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Jam Operasional</h2>
           
           <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Jam Pengambilan</h3>
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3">Jam Pengambilan</h3>
             <textarea
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
               rows="3"
@@ -233,7 +233,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="bg-primary text-white px-8 py-3 rounded-lg hover:bg-pink-600 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed w-full max-w-md flex items-center justify-center gap-2"
+            className="bg-primary text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg hover:bg-pink-600 active:bg-pink-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed w-full max-w-md flex items-center justify-center gap-2 text-sm sm:text-base touch-target"
           >
             <span>💾</span>
             {saving ? 'Menyimpan...' : 'Simpan Pengaturan'}

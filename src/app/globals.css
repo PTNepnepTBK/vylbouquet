@@ -315,6 +315,58 @@
     min-width: 44px;
     min-height: 44px;
   }
+
+  /* Table responsive wrapper dengan smooth scroll */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth scroll di iOS */
+    scrollbar-width: thin;
+    scrollbar-color: #e5e7eb #f9fafb;
+  }
+
+  .table-responsive::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .table-responsive::-webkit-scrollbar-track {
+    background: #f9fafb;
+    border-radius: 4px;
+  }
+
+  .table-responsive::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 4px;
+    transition: background 0.2s;
+  }
+
+  .table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #d1d5db;
+  }
+
+  /* Table fixed columns untuk mobile view */
+  .table-fixed-sm {
+    table-layout: fixed;
+    min-width: 640px;
+  }
+
+  .table-fixed-md {
+    table-layout: fixed;
+    min-width: 900px;
+  }
+
+  .table-fixed-lg {
+    table-layout: fixed;
+    min-width: 1200px;
+  }
+
+  /* Compact table untuk mobile */
+  @media (max-width: 640px) {
+    .table-compact th,
+    .table-compact td {
+      padding: 0.5rem !important;
+      font-size: 0.75rem !important;
+    }
+  }
   
   /* Safe area untuk notch device */
   .safe-top {

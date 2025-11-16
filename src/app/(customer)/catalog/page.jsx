@@ -183,20 +183,18 @@ export default function CatalogPage() {
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="mt-8 md:mt-12">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={goToPage}
-                  totalItems={totalItems}
-                  startIndex={startIndex}
-                  endIndex={endIndex}
-                  perPage={perPage}
-                  onPerPageChange={changePerPage}
-                />
-              </div>
-            )}
+            <div className="mt-8 md:mt-12">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={goToPage}
+                totalItems={totalItems}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                perPage={perPage}
+                onPerPageChange={changePerPage}
+              />
+            </div>
 
             {/* Result count - Helper text */}
             <div className="text-center mt-6 text-sm text-gray-500">
