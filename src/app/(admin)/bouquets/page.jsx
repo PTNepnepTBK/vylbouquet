@@ -6,7 +6,9 @@ import BouquetModal from '../../../components/admin/BouquetModal';
 import SearchBar from '../../../components/ui/SearchBar';
 import FilterSelect from '../../../components/ui/FilterSelect';
 import StatsCard from '../../../components/ui/StatsCard';
+import Pagination from '../../../components/ui/Pagination';
 import { useToast } from '../../../hooks/useToast';
+import { usePagination } from '../../../hooks/usePagination';
 
 export default function BouquetsPage() {
   const showToast = useToast(); // Toast notifications
@@ -18,6 +20,19 @@ export default function BouquetsPage() {
   const [selectedBouquet, setSelectedBouquet] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  // Pagination
+  const {
+    paginatedData: paginatedBouquets,
+    currentPage,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+    perPage,
+    goToPage,
+    changePerPage,
+  } = usePagination(bouquets, 9); // 9 items per page (3x3 grid)
 
   // Fetch stats
   const fetchStats = async () => {
@@ -220,8 +235,9 @@ export default function BouquetsPage() {
 
       {/* Bouquets Grid */}
       {!loading && bouquets.length > 0 && (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {bouquets.map((bouquet) => (
+          {paginatedBouquets.map((bouquet) => (
             <div
               key={bouquet.id}
               className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden"
@@ -282,6 +298,21 @@ export default function BouquetsPage() {
             </div>
           ))}
         </div>
+
+        {/* Pagination */}
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+            totalItems={totalItems}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            perPage={perPage}
+            onPerPageChange={changePerPage}
+          />
+        </div>
+        </>
       )}
 
       {/* Modal */}

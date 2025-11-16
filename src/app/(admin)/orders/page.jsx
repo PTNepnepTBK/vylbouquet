@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import SearchBar from '@/components/ui/SearchBar';
 import FilterSelect from '@/components/ui/FilterSelect';
+import Pagination from '@/components/ui/Pagination';
 import { useToast } from '@/hooks/useToast';
+import { usePagination } from '@/hooks/usePagination';
 // jsPDF and jspdf-autotable are loaded dynamically inside `exportToPDF`
 // to avoid build-time resolution errors and SSR issues.
 
@@ -208,6 +210,19 @@ export default function OrdersPage() {
     return matchSearch && matchStatus && matchPayment;
   });
 
+  // Pagination
+  const {
+    paginatedData: paginatedOrders,
+    currentPage,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+    perPage,
+    goToPage,
+    changePerPage,
+  } = usePagination(filteredOrders, 10); // 10 orders per page
+
   const statusOptions = [
     { value: '', label: 'Semua Status Pesanan' },
     { value: 'WAITING_CONFIRMATION', label: 'Menunggu Konfirmasi' },
@@ -309,7 +324,7 @@ export default function OrdersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {filteredOrders.map((order) => {
+                {paginatedOrders.map((order) => {
                   const totalPrice = parseFloat(order.bouquet_price || 0);
                   const remaining = parseFloat(order.remaining_amount || 0);
 
@@ -351,6 +366,20 @@ export default function OrdersPage() {
               </tbody>
             </table>
           </div>
+        )}
+        
+        {/* Pagination */}
+        {!loading && filteredOrders.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+            totalItems={totalItems}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            perPage={perPage}
+            onPerPageChange={changePerPage}
+          />
         )}
       </div>
     </div>

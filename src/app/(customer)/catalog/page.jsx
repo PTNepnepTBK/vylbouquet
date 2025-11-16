@@ -3,7 +3,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import NavBar from '../../../components/ui/NavBar'
+import NavBar from '../../../components/ui/NavBar';
+import Pagination from '../../../components/ui/Pagination';
+import { usePagination } from '../../../hooks/usePagination';
 
 export default function CatalogPage() {
   const [bouquets, setBouquets] = useState([]);
@@ -41,6 +43,19 @@ export default function CatalogPage() {
     const q = query.toLowerCase();
     return bouquets.filter(b => (b.name || '').toLowerCase().includes(q) || (b.description || '').toLowerCase().includes(q));
   }, [bouquets, query]);
+
+  // Pagination untuk catalog
+  const {
+    paginatedData: paginatedBouquets,
+    currentPage,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+    perPage,
+    goToPage,
+    changePerPage,
+  } = usePagination(filtered, 12); // 12 items (6 rows x 2 cols mobile)
 
   if (loading) {
     return (
@@ -100,9 +115,10 @@ export default function CatalogPage() {
               <p className="text-lg">Belum ada buket tersedia</p>
             </div>
           ) : (
-            // Grid: 2 kolom di mobile, 2 di tablet, 3 di desktop
+            <>
+            {/* Grid: 2 kolom di mobile, 2 di tablet, 3 di desktop */}
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
-              {filtered.map((bouquet) => (
+              {paginatedBouquets.map((bouquet) => (
                 <div 
                   key={bouquet.id} 
                   className="bg-white rounded-lg sm:rounded-xl shadow-md hover:shadow-xl transition-shadow flex flex-col group"
@@ -165,14 +181,29 @@ export default function CatalogPage() {
                 </div>
               ))}
             </div>
-          )}
 
-          {/* Result count - Helper text */}
-          {filtered.length > 0 && (
-            <div className="text-center mt-8 md:mt-12 text-sm text-gray-500">
-              Menampilkan {filtered.length} buket
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-8 md:mt-12">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={goToPage}
+                  totalItems={totalItems}
+                  startIndex={startIndex}
+                  endIndex={endIndex}
+                  perPage={perPage}
+                  onPerPageChange={changePerPage}
+                />
+              </div>
+            )}
+
+            {/* Result count - Helper text */}
+            <div className="text-center mt-6 text-sm text-gray-500">
+              Menampilkan {startIndex}-{endIndex} dari {totalItems} buket
               {query && ` untuk "${query}"`}
             </div>
+            </>
           )}
         </div>
       </div>
