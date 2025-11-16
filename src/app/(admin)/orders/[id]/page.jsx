@@ -159,7 +159,7 @@ export default function OrderDetailPage({ params }) {
         </Link>
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Detail Pesanan #{order.id}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Detail Pesanan {order.order_number}</h1>
             <p className="text-gray-600 mt-1">
               Dibuat pada {formatDate(order.created_at)}
             </p>
@@ -239,6 +239,12 @@ export default function OrderDetailPage({ params }) {
                 <span className="text-gray-600">Jenis Pembayaran</span>
                 <span className="font-semibold">{order.payment_type === 'DP' ? 'DP (Down Payment)' : 'Lunas'}</span>
               </div>
+              {order.payment_method && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Metode Pembayaran</span>
+                  <span className="font-semibold">{order.payment_method}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Harga Total</span>
                 <span className="font-bold text-lg">{formatPrice(totalPrice)}</span>

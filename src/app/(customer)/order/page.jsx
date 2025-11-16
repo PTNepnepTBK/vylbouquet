@@ -12,6 +12,7 @@ export default function OrderPage() {
 
   const [bouquets, setBouquets] = useState([]);
   const [selectedBouquet, setSelectedBouquet] = useState(null);
+  const [paymentMethods, setPaymentMethods] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   
@@ -26,6 +27,7 @@ export default function OrderPage() {
     sender_name: '',
     sender_account_number: '',
     sender_phone: '',
+    payment_method: '',
   });
 
   const [referenceFiles, setReferenceFiles] = useState([]);
@@ -34,6 +36,7 @@ export default function OrderPage() {
 
   useEffect(() => {
     fetchBouquets();
+    fetchPaymentMethods();
   }, []);
 
   useEffect(() => {
@@ -55,6 +58,38 @@ export default function OrderPage() {
       }
     } catch (error) {
       console.error('Error fetching bouquets:', error);
+    }
+  };
+
+  const fetchPaymentMethods = async () => {
+    try {
+      const response = await fetch('/api/settings');
+      const data = await response.json();
+      if (data.success) {
+        // Filter settings yang merupakan payment methods
+        const methods = [];
+        const settingsData = data.data;
+        
+        // List of possible payment method keys
+        const paymentKeys = ['payment_bca', 'payment_seabank', 'payment_shopeepay', 'payment_gopay', 'payment_dana', 'payment_ovo'];
+        
+        paymentKeys.forEach(key => {
+          if (settingsData[key]) {
+            const methodName = key.replace('payment_', '').toUpperCase();
+            const descKey = key + '_desc';
+            methods.push({
+              key: methodName,
+              value: settingsData[key],
+              description: settingsData[descKey] || '',
+              label: methodName === 'SHOPEEPAY' ? 'ShopeePay' : methodName.charAt(0) + methodName.slice(1).toLowerCase()
+            });
+          }
+        });
+        
+        setPaymentMethods(methods);
+      }
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
     }
   };
 
@@ -265,6 +300,16 @@ export default function OrderPage() {
               </div>
 
               <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Metode Pembayaran *</label>
+                <select required value={formData.payment_method} onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200">
+                  <option value="">Pilih metode pembayaran</option>
+                  {paymentMethods.map(method => (
+                    <option key={method.key} value={method.key}>{method.label} - {method.value}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">Upload Bukti Transfer / DP *</label>
                 <input type="file" accept="image/*" multiple required onChange={(e) => handleFileChange(e, 'payment')} className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md" />
               </div>
@@ -292,11 +337,19 @@ export default function OrderPage() {
 
             <div className="p-4 bg-white rounded-lg border border-pink-200">
               <h3 className="font-semibold mb-2">Metode Pembayaran</h3>
-              <div className="text-sm space-y-2">
-                <div><strong>BCA:</strong> 4370321906 a.n Vina Enjelia</div>
-                <div><strong>SeaBank:</strong> 901081198646 a.n Vina Enjelia</div>
-                <div><strong>ShopePay:</strong> 0882002048431 a.n Vina Enjelia</div>
-                <p className="text-xs text-pink-400 mt-2">Transfer dari bank dikenakan biaya admin +Rp 1.000</p>
+              <div className="text-sm space-y-3">
+                {paymentMethods.length > 0 ? (
+                  paymentMethods.map(method => (
+                    <div key={method.key} className="pb-2 border-b border-pink-100 last:border-0">
+                      <div><strong>{method.label}:</strong> {method.value}</div>
+                      {method.description && (
+                        <div className="text-xs text-pink-500 mt-1">{method.description}</div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500">Memuat metode pembayaran...</p>
+                )}
               </div>
             </div>
 

@@ -96,6 +96,7 @@ export async function POST(request) {
       "pickup_time",
       "payment_type",
       "sender_name",
+      "payment_method",
     ];
 
     for (const field of requiredFields) {
@@ -166,6 +167,7 @@ export async function POST(request) {
         sender_phone: body.sender_phone || null,
         bouquet_price: bouquetPrice,
         payment_type: body.payment_type,
+        payment_method: body.payment_method,
         dp_amount: dpAmount,
         remaining_amount: remainingAmount,
         total_paid: totalPaid,

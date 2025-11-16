@@ -23,9 +23,9 @@ const OrderImage = sequelize.define(
       allowNull: false,
     },
     image_type: {
-      type: DataTypes.ENUM("REFERENCE", "PAYMENT_PROOF"),
+      type: DataTypes.ENUM("DESIRED_BOUQUET", "REFERENCE", "PAYMENT_PROOF"),
       allowNull: false,
-      comment: "REFERENCE = foto referensi buket, PAYMENT_PROOF = bukti transfer",
+      comment: "DESIRED_BOUQUET = foto buket yang diinginkan, REFERENCE = foto referensi buket, PAYMENT_PROOF = bukti transfer",
     },
     display_order: {
       type: DataTypes.INTEGER,

@@ -49,6 +49,11 @@ const Order = sequelize.define(
       type: DataTypes.ENUM("DP", "FULL"),
       allowNull: false,
     },
+    payment_method: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: "Metode pembayaran yang dipilih (BCA, SeaBank, ShopeePay, dll)",
+    },
     dp_amount: {
       type: DataTypes.DECIMAL(10, 2),
       defaultValue: 0,

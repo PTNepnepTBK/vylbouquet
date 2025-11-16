@@ -8,12 +8,12 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
-    bank_bca: '',
-    bank_bca_name: '',
-    bank_seabank: '',
-    bank_seabank_name: '',
-    ewallet_shopeepay: '',
-    ewallet_shopeepay_name: '',
+    payment_bca: '',
+    payment_bca_desc: '',
+    payment_seabank: '',
+    payment_seabank_desc: '',
+    payment_shopeepay: '',
+    payment_shopeepay_desc: '',
     min_dp_percent: '30',
     whatsapp_number: '',
     instagram_handle: '',
@@ -28,12 +28,12 @@ export default function SettingsPage() {
 
       if (data.success) {
         setSettings({
-          bank_bca: data.data.bank_bca || '',
-          bank_bca_name: data.data.bank_bca_name || '',
-          bank_seabank: data.data.bank_seabank || '',
-          bank_seabank_name: data.data.bank_seabank_name || '',
-          ewallet_shopeepay: data.data.ewallet_shopeepay || '',
-          ewallet_shopeepay_name: data.data.ewallet_shopeepay_name || '',
+          payment_bca: data.data.payment_bca || '',
+          payment_bca_desc: data.data.payment_bca_desc || '',
+          payment_seabank: data.data.payment_seabank || '',
+          payment_seabank_desc: data.data.payment_seabank_desc || '',
+          payment_shopeepay: data.data.payment_shopeepay || '',
+          payment_shopeepay_desc: data.data.payment_shopeepay_desc || '',
           min_dp_percent: data.data.min_dp_percent || '30',
           whatsapp_number: data.data.whatsapp_number || '',
           instagram_handle: data.data.instagram_handle || '',
@@ -65,7 +65,7 @@ export default function SettingsPage() {
     e.preventDefault();
 
     // Validasi
-    if (!settings.bank_bca && !settings.bank_seabank && !settings.ewallet_shopeepay) {
+    if (!settings.payment_bca && !settings.payment_seabank && !settings.payment_shopeepay) {
       alert('Minimal satu metode pembayaran harus diisi');
       return;
     }
@@ -139,48 +139,72 @@ export default function SettingsPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">Metode Pembayaran</h2>
           
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Rekening BCA</h3>
-            <Input
-              label="Rekening BCA"
-              name="bank_bca"
-              value={settings.bank_bca}
-              onChange={handleChange}
-              placeholder="4373021906 a.n Vina Enjelia"
-            />
-          </div>
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-3">Rekening BCA</h3>
+              <Input
+                label="Nomor Rekening BCA"
+                name="payment_bca"
+                value={settings.payment_bca}
+                onChange={handleChange}
+                placeholder="4370321906 a.n Vina Enjelia"
+              />
+              <div className="mt-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan BCA (Opsional)</label>
+                <textarea
+                  name="payment_bca_desc"
+                  value={settings.payment_bca_desc}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                  rows="2"
+                  placeholder="Contoh: Transfer dari bank lain +Rp 1.000 admin"
+                />
+              </div>
+            </div>
 
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Rekening SeaBank</h3>
-            <Input
-              label="Rekening SeaBank"
-              name="bank_seabank"
-              value={settings.bank_seabank}
-              onChange={handleChange}
-              placeholder="901081198646 a.n Vina Enjelia"
-            />
-          </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-3">Rekening SeaBank</h3>
+              <Input
+                label="Nomor Rekening SeaBank"
+                name="payment_seabank"
+                value={settings.payment_seabank}
+                onChange={handleChange}
+                placeholder="901081198646 a.n Vina Enjelia"
+              />
+              <div className="mt-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan SeaBank (Opsional)</label>
+                <textarea
+                  name="payment_seabank_desc"
+                  value={settings.payment_seabank_desc}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                  rows="2"
+                  placeholder="Contoh: Transfer antar bank gratis"
+                />
+              </div>
+            </div>
 
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Nomor ShopeePay</h3>
-            <Input
-              label="Nomor ShopeePay"
-              name="ewallet_shopeepay"
-              value={settings.ewallet_shopeepay}
-              onChange={handleChange}
-              placeholder="0882002048431 a.n Vina Enjelia"
-            />
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Catatan ShopeePay</h3>
-            <textarea
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-              rows="2"
-              placeholder="Transfer ShopeePay dari bank +1000 admin"
-              value="Transfer ShopeePay dari bank +1000 admin"
-              readOnly
-            />
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-3">Nomor ShopeePay</h3>
+              <Input
+                label="Nomor ShopeePay"
+                name="payment_shopeepay"
+                value={settings.payment_shopeepay}
+                onChange={handleChange}
+                placeholder="0882002048431 a.n Vina Enjelia"
+              />
+              <div className="mt-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan ShopeePay (Opsional)</label>
+                <textarea
+                  name="payment_shopeepay_desc"
+                  value={settings.payment_shopeepay_desc}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                  rows="2"
+                  placeholder="Contoh: Transfer dari bank +Rp 1.000 admin"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
