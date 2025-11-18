@@ -1,11 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import { useToast } from '../../../hooks/useToast';
+import { useAuth } from '../../../hooks/useAuth';
 
 export default function SettingsPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const showToast = useToast(); // Toast notifications
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -30,12 +34,12 @@ export default function SettingsPage() {
 
       if (data.success) {
         setSettings({
-          payment_bca: data.data.payment_bca || '',
-          payment_bca_desc: data.data.payment_bca_desc || '',
-          payment_seabank: data.data.payment_seabank || '',
-          payment_seabank_desc: data.data.payment_seabank_desc || '',
-          payment_shopeepay: data.data.payment_shopeepay || '',
-          payment_shopeepay_desc: data.data.payment_shopeepay_desc || '',
+          payment_bca: data.data.payment_bca?.value || '',
+          payment_bca_desc: data.data.payment_bca?.description || '',
+          payment_seabank: data.data.payment_seabank?.value || '',
+          payment_seabank_desc: data.data.payment_seabank?.description || '',
+          payment_shopeepay: data.data.payment_shopeepay?.value || '',
+          payment_shopeepay_desc: data.data.payment_shopeepay?.description || '',
           min_dp_percent: data.data.min_dp_percent || '30',
           whatsapp_number: data.data.whatsapp_number || '',
           instagram_handle: data.data.instagram_handle || '',
@@ -50,8 +54,13 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+    if (user) {
+      fetchSettings();
+    }
+  }, [user, authLoading, router]);
 
   // Handle input change
   const handleChange = (e) => {
@@ -67,7 +76,7 @@ export default function SettingsPage() {
     e.preventDefault();
 
     // Validasi
-    if (!settings.bank_bca && !settings.bank_seabank && !settings.ewallet_shopeepay) {
+    if (!settings.payment_bca && !settings.payment_seabank && !settings.payment_shopeepay) {
       showToast.error('Minimal satu metode pembayaran harus diisi');
       return;
     }
@@ -79,12 +88,23 @@ export default function SettingsPage() {
 
     try {
       setSaving(true);
+      
+      // Prepare data dengan struktur value dan description
+      const settingsData = {
+        payment_bca: { value: settings.payment_bca, description: settings.payment_bca_desc },
+        payment_seabank: { value: settings.payment_seabank, description: settings.payment_seabank_desc },
+        payment_shopeepay: { value: settings.payment_shopeepay, description: settings.payment_shopeepay_desc },
+        min_dp_percent: settings.min_dp_percent,
+        whatsapp_number: settings.whatsapp_number,
+        instagram_handle: settings.instagram_handle,
+      };
+      
       const response = await fetch('/api/settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(settingsData),
       });
 
       const data = await response.json();
@@ -102,12 +122,16 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex justify-center items-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
@@ -141,75 +165,74 @@ export default function SettingsPage() {
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
           <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Metode Pembayaran</h2>
           
-          <div>
-            <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3">Rekening BCA</h3>
-            <Input
-              label="Rekening BCA"
-              name="bank_bca"
-              value={settings.bank_bca}
-              onChange={handleChange}
-              placeholder="3741159803"
-            />
+          <div className="mb-4">
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3">BCA</h3>
+            <div className="mb-3">
+              <Input
+                label="Nomor Rekening BCA"
+                name="payment_bca"
+                value={settings.payment_bca}
+                onChange={handleChange}
+                placeholder="3741159803"
+              />
+            </div>
+            <div>
+              <Input
+                label="Nama Pemilik Rekening BCA"
+                name="payment_bca_name"
+                value={settings.payment_bca_name}
+                onChange={handleChange}
+                placeholder="Muhammad Nashirul Haq Resa"
+              />
+            </div>
           </div>
-          <div className="my-1">
-            <Input
-              label="Nama"
-              name="bank_bca_name"
-              value={settings.bank_bca_name}
-              onChange={handleChange}
-              placeholder="Muhammad Nashirul Haq Resa"
-            />
+
+          <div className="mb-4">
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3">SeaBank</h3>
+            <div className="mb-3">
+              <Input
+                label="Nomor Rekening SeaBank"
+                name="payment_seabank"
+                value={settings.payment_seabank}
+                onChange={handleChange}
+                placeholder="901763996563"
+              />
+            </div>
+            <div>
+              <Input
+                label="Nama Pemilik Rekening SeaBank"
+                name="payment_seabank_name"
+                value={settings.payment_seabank_name}
+                onChange={handleChange}
+                placeholder="Muhammad Nashirul Haq Resa"
+              />
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3">ShopeePay</h3>
+            <div className="mb-3">
+              <Input
+                label="Nomor ShopeePay"
+                name="payment_shopeepay"
+                value={settings.payment_shopeepay}
+                onChange={handleChange}
+                placeholder="085161553414"
+              />
+            </div>
+            <div>
+              <Input
+                label="Nama Pemilik ShopeePay"
+                name="payment_shopeepay_name"
+                value={settings.payment_shopeepay_name}
+                onChange={handleChange}
+                placeholder="Muhammad Nashirul Haq Resa"
+              />
+            </div>
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-900 my-3">Rekening SeaBank</h3>
-            <Input
-              label="Rekening SeaBank"
-              name="bank_seabank"
-              value={settings.bank_seabank}
-              onChange={handleChange}
-              placeholder="901763996563"
-            />
-          </div>
-          <div className="my-1">
-            <Input
-              label="Nama"
-              name="bank_seabank_name"
-              value={settings.bank_seabank_name}
-              onChange={handleChange}
-              placeholder="Muhammad Nashirul Haq Resa"
-            />
-          </div>
-
-          <div>
-            <h3 className="text-sm sm:text-base font-semibold text-gray-900 my-3">Nomor ShopeePay</h3>
-            <Input
-              label="Nomor ShopeePay"
-              name="ewallet_shopeepay"
-              value={settings.ewallet_shopeepay}
-              onChange={handleChange}
-              placeholder="085161553414"
-            />
-          </div>
-          <div className="my-1">
-            <Input
-              label="Nama"
-              name="ewallet_shopeepay_name"
-              value={settings.ewallet_shopeepay_name}
-              onChange={handleChange}
-              placeholder="Muhammad Nashirul Haq Resa"
-            />
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Catatan ShopeePay</h3>
-            <textarea
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-              rows="2"
-              placeholder="Transfer ShopeePay dari bank +1000 admin"
-              value="Transfer ShopeePay dari bank +1000 admin"
-              readOnly
-            />
+            <p className="text-xs text-pink-500 font-medium">💡 Catatan: Transfer ShopeePay dari bank dikenakan biaya admin +Rp 1.000</p>
           </div>
         </div>
 

@@ -35,7 +35,7 @@ export default function OrderPage() {
 
   const [referenceFiles, setReferenceFiles] = useState([]);
   const [paymentFiles, setPaymentFiles] = useState([]);
-  const [desiredBouquetFiles, setDesiredBouquetFiles] = useState([]);
+  const [showBouquetDropdown, setShowBouquetDropdown] = useState(false);
 
   useEffect(() => {
     // Load bouquets and settings in parallel for faster startup
@@ -69,18 +69,29 @@ export default function OrderPage() {
     }
   }, [bouquetIdParam, bouquets]);
 
-  const handleBouquetChange = (e) => {
-    const bouquetId = e.target.value;
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showBouquetDropdown && !event.target.closest('.bouquet-dropdown-container')) {
+        setShowBouquetDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showBouquetDropdown]);
+
+  const handleBouquetChange = (bouquetId) => {
     setFormData((prev) => ({ ...prev, bouquet_id: bouquetId }));
     const bouquet = bouquets.find((b) => b.id === parseInt(bouquetId));
     setSelectedBouquet(bouquet);
+    setShowBouquetDropdown(false);
   };
 
   const handleFileChange = (e, type) => {
     const files = Array.from(e.target.files || []);
     if (type === "reference") setReferenceFiles(files);
     else if (type === "payment") setPaymentFiles(files);
-    else if (type === "desired") setDesiredBouquetFiles(files);
   };
 
   const uploadFiles = async (files, type) => {
@@ -120,15 +131,13 @@ export default function OrderPage() {
     setLoading(true);
     try {
       // Run uploads in parallel
-      const [desiredUrls, refUrls, payUrls] = await Promise.all([
-        uploadFiles(desiredBouquetFiles, "desired"),
+      const [refUrls, payUrls] = await Promise.all([
         uploadFiles(referenceFiles, "reference"),
         uploadFiles(paymentFiles, "payment"),
       ]);
 
       const orderData = {
         ...formData,
-        desired_bouquet_images: desiredUrls,
         reference_images: refUrls,
         payment_proofs: payUrls,
       };
@@ -233,37 +242,78 @@ export default function OrderPage() {
 
                 <div className="mb-3 md:mb-4">
                   <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
-                    Upload Foto Buket yang Diinginkan
-                  </label>
-                  <p className="text-xs text-gray-500 mb-2">
-                    Upload foto contoh buket yang Anda inginkan (opsional)
-                  </p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => handleFileChange(e, "desired")}
-                    className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md text-xs sm:text-sm touch-target cursor-pointer hover:border-pink-300 transition-colors"
-                  />
-                </div>
-
-                <div className="mb-3 md:mb-4">
-                  <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
                     Pilih Buket *
                   </label>
-                  <select
+                  <div className="relative bouquet-dropdown-container">
+                    <button
+                      type="button"
+                      onClick={() => setShowBouquetDropdown(!showBouquetDropdown)}
+                      className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target cursor-pointer bg-white text-left flex items-center justify-between"
+                    >
+                      <span className="flex items-center gap-2">
+                        {selectedBouquet ? (
+                          <>
+                            {selectedBouquet.image_url && (
+                              <div className="relative w-8 h-8 rounded overflow-hidden flex-shrink-0">
+                                <Image
+                                  src={selectedBouquet.image_url}
+                                  alt={selectedBouquet.name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
+                            )}
+                            <span className="text-gray-900">{selectedBouquet.name}</span>
+                          </>
+                        ) : (
+                          <span className="text-gray-500">Pilih buket yang Anda inginkan</span>
+                        )}
+                      </span>
+                      <svg className={`w-5 h-5 text-gray-400 transition-transform ${showBouquetDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    
+                    {showBouquetDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-pink-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                        {bouquets.length === 0 ? (
+                          <div className="px-3 py-2 text-sm text-gray-500">Tidak ada buket tersedia</div>
+                        ) : (
+                          bouquets.map((bouquet) => (
+                            <button
+                              key={bouquet.id}
+                              type="button"
+                              onClick={() => handleBouquetChange(bouquet.id)}
+                              className={`w-full px-3 py-2 flex items-center gap-3 hover:bg-pink-50 transition-colors text-left ${
+                                formData.bouquet_id === bouquet.id.toString() ? 'bg-pink-50' : ''
+                              }`}
+                            >
+                              {bouquet.image_url && (
+                                <div className="relative w-12 h-12 rounded overflow-hidden flex-shrink-0 border border-gray-200">
+                                  <Image
+                                    src={bouquet.image_url}
+                                    alt={bouquet.name}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-gray-900 truncate">{bouquet.name}</div>
+                                <div className="text-xs text-pink-600 font-semibold">{formatPrice(bouquet.price)}</div>
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {/* Hidden input for form validation */}
+                  <input
+                    type="hidden"
                     required
                     value={formData.bouquet_id}
-                    onChange={handleBouquetChange}
-                    className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target cursor-pointer bg-white"
-                  >
-                    <option value="">Pilih buket yang Anda inginkan</option>
-                    {bouquets.map((bouquet) => (
-                      <option key={bouquet.id} value={bouquet.id}>
-                        {bouquet.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-3 md:mb-4">
@@ -397,37 +447,36 @@ export default function OrderPage() {
                   />
                 </div>
 
-                <select
-                  required
-                  value={formData.payment_method}
-                  onChange={(e) =>
-                    setFormData({ ...formData, payment_method: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200"
-                >
-                  <option value="">Pilih metode pembayaran</option>
-
-                  <option value="bca">
-                    BCA: {settings?.bank_bca || "—"}{" "}
-                    {settings?.bank_bca_name
-                      ? `(a.n ${settings.bank_bca_name})`
-                      : ""}
-                  </option>
-
-                  <option value="seabank">
-                    SeaBank: {settings?.bank_seabank || "—"}{" "}
-                    {settings?.bank_seabank_name
-                      ? `(a.n ${settings.bank_seabank_name})`
-                      : ""}
-                  </option>
-
-                  <option value="shopeepay">
-                    ShopeePay: {settings?.ewallet_shopeepay || "—"}{" "}
-                    {settings?.ewallet_shopeepay_name
-                      ? `(a.n ${settings.ewallet_shopeepay_name})`
-                      : ""}
-                  </option>
-                </select>
+                <div className="mb-3 md:mb-4">
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
+                    Metode Pembayaran *
+                  </label>
+                  <select
+                    required
+                    value={formData.payment_method}
+                    onChange={(e) =>
+                      setFormData({ ...formData, payment_method: e.target.value })
+                    }
+                    className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target cursor-pointer bg-white"
+                  >
+                    <option value="">Pilih metode pembayaran</option>
+                    {settings?.payment_bca?.value && (
+                      <option value="bca">
+                        BCA - {settings.payment_bca.value}{settings.payment_bca.description ? ` a.n ${settings.payment_bca.description}` : ''}
+                      </option>
+                    )}
+                    {settings?.payment_seabank?.value && (
+                      <option value="seabank">
+                        SeaBank - {settings.payment_seabank.value}{settings.payment_seabank.description ? ` a.n ${settings.payment_seabank.description}` : ''}
+                      </option>
+                    )}
+                    {settings?.payment_shopeepay?.value && (
+                      <option value="shopeepay">
+                        ShopeePay - {settings.payment_shopeepay.value}{settings.payment_shopeepay.description ? ` a.n ${settings.payment_shopeepay.description}` : ''}
+                      </option>
+                    )}
+                  </select>
+                </div>
 
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-2">
@@ -496,27 +545,32 @@ export default function OrderPage() {
                   Metode Pembayaran
                 </h3>
                 <div className="text-xs sm:text-sm space-y-2">
-                  <div>
-                    <strong>BCA:</strong> {settings?.bank_bca || "—"}
-                    {settings?.bank_bca_name
-                      ? ` a.n ${settings.bank_bca_name}`
-                      : ""}
-                  </div>
-                  <div>
-                    <strong>SeaBank:</strong> {settings?.bank_seabank || "—"}
-                    {settings?.bank_seabank_name
-                      ? ` a.n ${settings.bank_seabank_name}`
-                      : ""}
-                  </div>
-                  <div>
-                    <strong>ShopePay:</strong>{" "}
-                    {settings?.ewallet_shopeepay || "—"}
-                    {settings?.ewallet_shopeepay_name
-                      ? ` a.n ${settings.ewallet_shopeepay_name}`
-                      : ""}
-                  </div>
+                  {settings?.payment_bca?.value && (
+                    <div>
+                      <strong>BCA:</strong> {settings.payment_bca.value}
+                      {settings.payment_bca.description && (
+                        <span className="text-gray-600"> a.n {settings.payment_bca.description}</span>
+                      )}
+                    </div>
+                  )}
+                  {settings?.payment_seabank?.value && (
+                    <div>
+                      <strong>SeaBank:</strong> {settings.payment_seabank.value}
+                      {settings.payment_seabank.description && (
+                        <span className="text-gray-600"> a.n {settings.payment_seabank.description}</span>
+                      )}
+                    </div>
+                  )}
+                  {settings?.payment_shopeepay?.value && (
+                    <div>
+                      <strong>ShopeePay:</strong> {settings.payment_shopeepay.value}
+                      {settings.payment_shopeepay.description && (
+                        <span className="text-gray-600"> a.n {settings.payment_shopeepay.description}</span>
+                      )}
+                    </div>
+                  )}
                   <p className="text-xs text-pink-400 mt-2">
-                    Transfer dari bank dikenakan biaya admin +Rp 1.000
+                    💡 Transfer ShopeePay dari bank dikenakan biaya admin +Rp 1.000
                   </p>
                 </div>
               </div>

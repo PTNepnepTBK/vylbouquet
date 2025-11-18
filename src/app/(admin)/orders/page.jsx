@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import SearchBar from '@/components/ui/SearchBar';
@@ -12,13 +13,21 @@ import { usePagination } from '@/hooks/usePagination';
 // to avoid build-time resolution errors and SSR issues.
 
 export default function OrdersPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const showToast = useToast(); // Toast notifications
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
+
+  // JWT Protection
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     fetchOrders();
@@ -253,6 +262,18 @@ export default function OrdersPage() {
     { value: 'PAID', label: 'Lunas' },
   ];
 
+  if (authLoading || loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div>
       {/* Header */}
@@ -317,36 +338,36 @@ export default function OrdersPage() {
               Geser ke kanan untuk melihat semua kolom
             </p>
           </div>
-          <div className="table-responsive">
-            <table className="w-full table-fixed table-fixed-md table-compact">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-max">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-semibold text-gray-600 w-16 sm:w-20">
-                    <div className="truncate">ID</div>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">
+                    ID
                   </th>
-                  <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-semibold text-gray-600 w-40 sm:w-48">
-                    <div className="truncate">Nama Pembeli</div>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap min-w-[150px]">
+                    Nama Pembeli
                   </th>
-                  <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-semibold text-gray-600 w-36 sm:w-44">
-                    <div className="truncate">Buket</div>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap min-w-[120px]">
+                    Buket
                   </th>
-                  <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-semibold text-gray-600 w-28 sm:w-32">
-                    <div className="truncate">Harga Total</div>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap min-w-[110px]">
+                    Harga Total
                   </th>
-                  <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-semibold text-gray-600 w-32 sm:w-36">
-                    <div className="truncate">Jenis Pembayaran</div>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap min-w-[140px]">
+                    Jenis Pembayaran
                   </th>
-                  <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-semibold text-gray-600 w-24 sm:w-28">
-                    <div className="truncate">Sisa</div>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap min-w-[100px]">
+                    Sisa
                   </th>
-                  <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-semibold text-gray-600 w-36 sm:w-40">
-                    <div className="truncate">Status Pesanan</div>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap min-w-[150px]">
+                    Status Pesanan
                   </th>
-                  <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-semibold text-gray-600 w-32 sm:w-36">
-                    <div className="truncate">Status Pembayaran</div>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap min-w-[130px]">
+                    Status Pembayaran
                   </th>
-                  <th className="px-2 sm:px-3 py-2 text-left text-[10px] sm:text-xs font-semibold text-gray-600 w-24 sm:w-28">
-                    <div className="truncate">Aksi</div>
+                  <th className="px-3 sm:px-4 py-3 text-left text-xs font-semibold text-gray-600 whitespace-nowrap">
+                    Aksi
                   </th>
                 </tr>
               </thead>
@@ -357,38 +378,40 @@ export default function OrdersPage() {
 
                   return (
                     <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
                         <div className="text-sm font-semibold text-gray-900">{order.order_number}</div>
                       </td>
-                      <td className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap">
-                        <div className="text-xs sm:text-sm font-medium text-gray-900 truncate" title={order.customer_name}>{order.customer_name}</div>
+                      <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{order.customer_name}</div>
                       </td>
-                      <td className="px-2 sm:px-3 py-2 sm:py-3">
-                        <div className="text-xs sm:text-sm text-gray-700 truncate" title={order.bouquet?.name}>{order.bouquet?.name || 'Custom'}</div>
+                      <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
+                        <div className="text-sm text-gray-700">{order.bouquet?.name || 'Custom'}</div>
                       </td>
-                      <td className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap">
-                        <div className="text-xs sm:text-sm font-semibold text-gray-900">{formatPrice(totalPrice)}</div>
+                      <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-gray-900">{formatPrice(totalPrice)}</div>
                       </td>
-                      <td className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap">
-                        <div className="text-xs sm:text-sm text-gray-700">
+                      <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
+                        <div className="text-sm text-gray-700">
                           <span className="font-medium">{order.payment_type === 'DP' ? 'DP' : 'Lunas'}</span>
-                          <span className="hidden sm:inline text-gray-500 ml-1">
+                          <span className="text-gray-500 ml-1">
                             {order.payment_type === 'DP' && `(${formatPrice(order.dp_amount)})`}
                           </span>
                         </div>
                       </td>
-                      <td className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap">
-                        <div className={`text-xs sm:text-sm font-semibold ${remaining > 0 ? 'text-orange-600' : 'text-green-600'}`}>{remaining > 0 ? formatPrice(remaining) : '-'}</div>
+                      <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
+                        <div className={`text-sm font-semibold ${remaining > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                          {remaining > 0 ? formatPrice(remaining) : '-'}
+                        </div>
                       </td>
-                      <td className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap">
+                      <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
                         {getStatusBadge(order.order_status)}
                       </td>
-                      <td className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap">
+                      <td className="px-3 sm:px-4 py-3 whitespace-nowrap">
                         {getPaymentBadge(order.payment_status, remaining)}
                       </td>
-                      <td className="px-2 sm:px-3 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm">
-                        <Link href={`/orders/${order.id}`} className="text-primary hover:text-pink-600 font-semibold transition-colors inline-flex items-center gap-1 touch-target">
-                          <span className="hidden sm:inline">Detail</span>
+                      <td className="px-3 sm:px-4 py-3 whitespace-nowrap text-sm">
+                        <Link href={`/orders/${order.id}`} className="text-primary hover:text-pink-600 font-semibold transition-colors inline-flex items-center gap-1">
+                          <span>Detail</span>
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>

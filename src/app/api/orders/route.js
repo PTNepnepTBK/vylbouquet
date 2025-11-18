@@ -182,21 +182,6 @@ export async function POST(request) {
       { transaction }
     );
 
-    // Simpan foto buket yang diinginkan (bisa lebih dari 1)
-    if (body.desired_bouquet_images && Array.isArray(body.desired_bouquet_images)) {
-      for (let i = 0; i < body.desired_bouquet_images.length; i++) {
-        await OrderImage.create(
-          {
-            order_id: order.id,
-            image_url: body.desired_bouquet_images[i],
-            image_type: "DESIRED_BOUQUET",
-            display_order: i + 1,
-          },
-          { transaction }
-        );
-      }
-    }
-
     // Simpan foto referensi (bisa lebih dari 1)
     if (body.reference_images && Array.isArray(body.reference_images)) {
       for (let i = 0; i < body.reference_images.length; i++) {

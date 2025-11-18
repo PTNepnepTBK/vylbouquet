@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import BouquetModal from '../../../components/admin/BouquetModal';
 import SearchBar from '../../../components/ui/SearchBar';
@@ -9,8 +10,11 @@ import StatsCard from '../../../components/ui/StatsCard';
 import Pagination from '../../../components/ui/Pagination';
 import { useToast } from '../../../hooks/useToast';
 import { usePagination } from '../../../hooks/usePagination';
+import { useAuth } from '../../../hooks/useAuth';
 
 export default function BouquetsPage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const showToast = useToast(); // Toast notifications
   const [bouquets, setBouquets] = useState([]);
   const [stats, setStats] = useState(null);
@@ -33,6 +37,13 @@ export default function BouquetsPage() {
     goToPage,
     changePerPage,
   } = usePagination(bouquets, 9); // 9 items per page (3x3 grid)
+
+  // JWT Protection
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
 
   // Fetch stats
   const fetchStats = async () => {

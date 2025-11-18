@@ -6,13 +6,22 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { useToast } from '../../../../hooks/useToast';
+import { useAuth } from '../../../../hooks/useAuth';
 
 export default function OrderDetailPage({ params }) {
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const showToast = useToast(); // Toast notifications
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+
+  // JWT Protection
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     fetchOrderDetail();
@@ -129,7 +138,7 @@ export default function OrderDetailPage({ params }) {
     });
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -137,7 +146,7 @@ export default function OrderDetailPage({ params }) {
     );
   }
 
-  if (!order) {
+  if (!user || !order) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500">Pesanan tidak ditemukan</p>
@@ -277,22 +286,6 @@ export default function OrderDetailPage({ params }) {
             <div className="bg-white rounded-lg shadow p-4 sm:p-6">
               <h2 className="text-base sm:text-lg lg:text-xl font-bold mb-3 sm:mb-4">Gambar Pesanan</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {/* Foto Buket yang Diinginkan */}
-                {order.images.filter(img => img.image_type === 'DESIRED_BOUQUET').map((img, idx) => (
-                  <div key={img.id}>
-                    <p className="text-xs sm:text-sm text-gray-500 mb-2">Foto Buket yang Diinginkan {idx + 1}</p>
-                    <div className="relative h-40 sm:h-48 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-purple-200 touch-target">
-                      <Image 
-                        src={img.image_url} 
-                        alt={`Buket Diinginkan ${idx + 1}`}
-                        fill
-                        className="object-cover"
-                        onClick={() => window.open(img.image_url, '_blank')}
-                      />
-                    </div>
-                  </div>
-                ))}
-                
                 {/* Foto Referensi */}
                 {order.images.filter(img => img.image_type === 'REFERENCE').map((img, idx) => (
                   <div key={img.id}>
@@ -327,57 +320,6 @@ export default function OrderDetailPage({ params }) {
               </div>
             </div>
           )}
-
-          {/* Gambar Buket Yang Diinginkan (ambil dari order.images dengan image_type 'DESIRED_BOUQUET') */}
-          {(() => {
-            const desiredImgs = (order.images || []).filter(img => img.image_type === 'DESIRED_BOUQUET');
-            if (desiredImgs.length > 0) {
-              return (
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h2 className="text-xl font-bold mb-4">Pesanan Buket Customer</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {desiredImgs.map((img, idx) => (
-                      <div key={img.id || idx}>
-                        <p className="text-sm text-gray-500 mb-2">{idx + 1}. Foto Buket yang Diinginkan</p>
-                        <div className="relative h-64 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-pink-200">
-                          <Image
-                            src={img.image_url}
-                            alt={img.caption || `Buket Diinginkan ${idx + 1}`}
-                            fill
-                            className="object-cover"
-                            onClick={() => window.open(img.image_url, '_blank')}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            }
-
-            // Fallback to bouquet image if no desired images uploaded
-            if (order.bouquet && order.bouquet.image_url) {
-              return (
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h2 className="text-xl font-bold mb-4">Pesanan Buket</h2>
-                  <div>
-                    <p className="text-sm text-gray-500 mb-2">{order.bouquet.name}</p>
-                    <div className="relative h-64 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-pink-200">
-                      <Image
-                        src={order.bouquet.image_url}
-                        alt={order.bouquet.name}
-                        fill
-                        className="object-cover"
-                        onClick={() => window.open(order.bouquet.image_url, '_blank')}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-
-            return null;
-          })()}
         </div>
 
         {/* Actions Sidebar */}

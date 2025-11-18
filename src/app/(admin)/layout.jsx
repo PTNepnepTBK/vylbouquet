@@ -20,23 +20,6 @@ export default function AdminLayout({ children }) {
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Jangan tampilkan layout di halaman login
-  if (pathname === '/login') {
-    return <>{children}</>;
-  }
-
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
-  };
-
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Squares2X2Icon },
-    { name: 'Manajemen Pesanan', href: '/orders', icon: ShoppingBagIcon },
-    { name: 'Katalog Buket', href: '/bouquets', icon: CubeIcon },
-    { name: 'Pengaturan', href: '/settings', icon: Cog6ToothIcon },
-  ];
-
   // Tutup sidebar saat route berubah di mobile
   useEffect(() => {
     setIsSidebarOpen(false);
@@ -54,6 +37,23 @@ export default function AdminLayout({ children }) {
       document.body.style.overflow = 'unset';
     };
   }, [isSidebarOpen]);
+
+  // Jangan tampilkan layout di halaman login
+  if (pathname === '/login') {
+    return <>{children}</>;
+  }
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
+
+  const navigation = [
+    { name: 'Dashboard', href: '/dashboard', icon: Squares2X2Icon },
+    { name: 'Manajemen Pesanan', href: '/orders', icon: ShoppingBagIcon },
+    { name: 'Katalog Buket', href: '/bouquets', icon: CubeIcon },
+    { name: 'Pengaturan', href: '/settings', icon: Cog6ToothIcon },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">

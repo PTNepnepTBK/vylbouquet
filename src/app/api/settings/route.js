@@ -10,10 +10,13 @@ export async function GET(request) {
     // Get all settings
     const settings = await Setting.findAll();
 
-    // Convert to key-value object
+    // Convert to key-value object with description
     const settingsObj = {};
     settings.forEach((setting) => {
-      settingsObj[setting.key] = setting.value;
+      settingsObj[setting.key] = {
+        value: setting.value,
+        description: setting.description,
+      };
     });
 
     return NextResponse.json({
@@ -38,14 +41,19 @@ export const PUT = authMiddleware(async function PUT(request) {
     const Setting = (await import("../../../models/Setting")).default;
 
     // Update or create each setting
-    const updatePromises = Object.entries(body).map(async ([key, value]) => {
+    const updatePromises = Object.entries(body).map(async ([key, data]) => {
+      // Handle both object {value, description} and primitive value
+      const value = typeof data === 'object' && data !== null ? data.value : data;
+      const description = typeof data === 'object' && data !== null ? data.description : null;
+      
       const [setting, created] = await Setting.findOrCreate({
         where: { key },
-        defaults: { key, value },
+        defaults: { key, value, description },
       });
 
       if (!created) {
         setting.value = value;
+        setting.description = description;
         await setting.save();
       }
 
