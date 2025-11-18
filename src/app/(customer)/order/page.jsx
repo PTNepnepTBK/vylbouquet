@@ -157,7 +157,34 @@ export default function OrderPage() {
       }
 
       showToast.success(`Pesanan berhasil! Nomor Order: ${saved.order_number || saved.id || ''}`);
-      router.push('/order-success');
+      
+      // Generate WhatsApp URL dengan data pesanan
+      const whatsappNumber = settings?.whatsapp_number || '6282180881698';
+      const orderForWhatsApp = {
+        order_number: saved.order_number || saved.id,
+        customer_name: saved.customer_name,
+        sender_phone: saved.sender_phone,
+        bouquet_name: selectedBouquet?.name || saved.bouquet_name,
+        bouquet_price: selectedBouquet?.price || saved.total_price,
+        payment_type: saved.payment_type,
+        sender_name: saved.sender_name,
+        pickup_date: saved.pickup_date,
+        pickup_time: saved.pickup_time,
+        card_message: saved.card_message,
+        additional_request: saved.additional_request,
+      };
+
+      // Import function untuk generate WhatsApp URL
+      const { generateWhatsAppUrl } = await import('../../../lib/whatsapp');
+      const waUrl = generateWhatsAppUrl(whatsappNumber, orderForWhatsApp);
+      
+      // Redirect ke WhatsApp
+      window.open(waUrl, '_blank');
+      
+      // Redirect ke halaman success
+      setTimeout(() => {
+        router.push('/order-success');
+      }, 500);
     } catch (error) {
       showToast.error(`Error: ${error?.message || error}`);
     } finally {
