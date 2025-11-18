@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
+import { useToast } from '../../../hooks/useToast';
 
 export default function SettingsPage() {
+  const showToast = useToast(); // Toast notifications
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
@@ -41,7 +43,7 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Fetch settings error:', error);
-      alert('Gagal memuat pengaturan');
+      showToast.error('Gagal memuat pengaturan');
     } finally {
       setLoading(false);
     }
@@ -65,13 +67,13 @@ export default function SettingsPage() {
     e.preventDefault();
 
     // Validasi
-    if (!settings.payment_bca && !settings.payment_seabank && !settings.payment_shopeepay) {
-      alert('Minimal satu metode pembayaran harus diisi');
+    if (!settings.bank_bca && !settings.bank_seabank && !settings.ewallet_shopeepay) {
+      showToast.error('Minimal satu metode pembayaran harus diisi');
       return;
     }
 
     if (settings.min_dp_percent && (isNaN(settings.min_dp_percent) || settings.min_dp_percent < 0 || settings.min_dp_percent > 100)) {
-      alert('Minimal DP harus antara 0-100%');
+      showToast.error('Minimal DP harus antara 0-100%');
       return;
     }
 
@@ -88,13 +90,13 @@ export default function SettingsPage() {
       const data = await response.json();
 
       if (data.success) {
-        alert('Pengaturan berhasil disimpan');
+        showToast.success('Pengaturan berhasil disimpan');
       } else {
         throw new Error(data.message);
       }
     } catch (error) {
       console.error('Save settings error:', error);
-      alert('Gagal menyimpan pengaturan: ' + error.message);
+      showToast.error('Gagal menyimpan pengaturan: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -110,15 +112,15 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Pengaturan Pembayaran & Ketentuan</h1>
-        <p className="text-gray-600 mt-1 text-sm">Kelola informasi pembayaran dan ketentuan pemesanan</p>
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Pengaturan Pembayaran & Ketentuan</h1>
+        <p className="text-gray-600 mt-1 text-xs sm:text-sm">Kelola informasi pembayaran dan ketentuan pemesanan</p>
       </div>
       
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* DP Settings */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Pengaturan DP</h2>
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Pengaturan DP</h2>
           
           <div>
             <Input
@@ -136,84 +138,87 @@ export default function SettingsPage() {
         </div>
 
         {/* Payment Methods */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Metode Pembayaran</h2>
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Metode Pembayaran</h2>
           
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-3">Rekening BCA</h3>
-              <Input
-                label="Nomor Rekening BCA"
-                name="payment_bca"
-                value={settings.payment_bca}
-                onChange={handleChange}
-                placeholder="4370321906 a.n Vina Enjelia"
-              />
-              <div className="mt-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan BCA (Opsional)</label>
-                <textarea
-                  name="payment_bca_desc"
-                  value={settings.payment_bca_desc}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-                  rows="2"
-                  placeholder="Contoh: Transfer dari bank lain +Rp 1.000 admin"
-                />
-              </div>
-            </div>
+          <div>
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3">Rekening BCA</h3>
+            <Input
+              label="Rekening BCA"
+              name="bank_bca"
+              value={settings.bank_bca}
+              onChange={handleChange}
+              placeholder="3741159803"
+            />
+          </div>
+          <div className="my-1">
+            <Input
+              label="Nama"
+              name="bank_bca_name"
+              value={settings.bank_bca_name}
+              onChange={handleChange}
+              placeholder="Muhammad Nashirul Haq Resa"
+            />
+          </div>
 
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-3">Rekening SeaBank</h3>
-              <Input
-                label="Nomor Rekening SeaBank"
-                name="payment_seabank"
-                value={settings.payment_seabank}
-                onChange={handleChange}
-                placeholder="901081198646 a.n Vina Enjelia"
-              />
-              <div className="mt-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan SeaBank (Opsional)</label>
-                <textarea
-                  name="payment_seabank_desc"
-                  value={settings.payment_seabank_desc}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-                  rows="2"
-                  placeholder="Contoh: Transfer antar bank gratis"
-                />
-              </div>
-            </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 my-3">Rekening SeaBank</h3>
+            <Input
+              label="Rekening SeaBank"
+              name="bank_seabank"
+              value={settings.bank_seabank}
+              onChange={handleChange}
+              placeholder="901763996563"
+            />
+          </div>
+          <div className="my-1">
+            <Input
+              label="Nama"
+              name="bank_seabank_name"
+              value={settings.bank_seabank_name}
+              onChange={handleChange}
+              placeholder="Muhammad Nashirul Haq Resa"
+            />
+          </div>
 
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-3">Nomor ShopeePay</h3>
-              <Input
-                label="Nomor ShopeePay"
-                name="payment_shopeepay"
-                value={settings.payment_shopeepay}
-                onChange={handleChange}
-                placeholder="0882002048431 a.n Vina Enjelia"
-              />
-              <div className="mt-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Catatan ShopeePay (Opsional)</label>
-                <textarea
-                  name="payment_shopeepay_desc"
-                  value={settings.payment_shopeepay_desc}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-                  rows="2"
-                  placeholder="Contoh: Transfer dari bank +Rp 1.000 admin"
-                />
-              </div>
-            </div>
+          <div>
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 my-3">Nomor ShopeePay</h3>
+            <Input
+              label="Nomor ShopeePay"
+              name="ewallet_shopeepay"
+              value={settings.ewallet_shopeepay}
+              onChange={handleChange}
+              placeholder="085161553414"
+            />
+          </div>
+          <div className="my-1">
+            <Input
+              label="Nama"
+              name="ewallet_shopeepay_name"
+              value={settings.ewallet_shopeepay_name}
+              onChange={handleChange}
+              placeholder="Muhammad Nashirul Haq Resa"
+            />
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-3">Catatan ShopeePay</h3>
+            <textarea
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+              rows="2"
+              placeholder="Transfer ShopeePay dari bank +1000 admin"
+              value="Transfer ShopeePay dari bank +1000 admin"
+              readOnly
+            />
           </div>
         </div>
 
         {/* Operational Hours */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Jam Operasional</h2>
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Jam Operasional</h2>
           
           <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Jam Pengambilan</h3>
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-3">Jam Pengambilan</h3>
             <textarea
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
               rows="3"
@@ -228,7 +233,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="bg-primary text-white px-8 py-3 rounded-lg hover:bg-pink-600 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed w-full max-w-md flex items-center justify-center gap-2"
+            className="bg-primary text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg hover:bg-pink-600 active:bg-pink-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed w-full max-w-md flex items-center justify-center gap-2 text-sm sm:text-base touch-target"
           >
             <span>💾</span>
             {saving ? 'Menyimpan...' : 'Simpan Pengaturan'}

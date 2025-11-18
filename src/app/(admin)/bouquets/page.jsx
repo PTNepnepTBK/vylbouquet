@@ -6,8 +6,12 @@ import BouquetModal from '../../../components/admin/BouquetModal';
 import SearchBar from '../../../components/ui/SearchBar';
 import FilterSelect from '../../../components/ui/FilterSelect';
 import StatsCard from '../../../components/ui/StatsCard';
+import Pagination from '../../../components/ui/Pagination';
+import { useToast } from '../../../hooks/useToast';
+import { usePagination } from '../../../hooks/usePagination';
 
 export default function BouquetsPage() {
+  const showToast = useToast(); // Toast notifications
   const [bouquets, setBouquets] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,6 +20,19 @@ export default function BouquetsPage() {
   const [selectedBouquet, setSelectedBouquet] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  // Pagination
+  const {
+    paginatedData: paginatedBouquets,
+    currentPage,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+    perPage,
+    goToPage,
+    changePerPage,
+  } = usePagination(bouquets, 9); // 9 items per page (3x3 grid)
 
   // Fetch stats
   const fetchStats = async () => {
@@ -46,7 +63,7 @@ export default function BouquetsPage() {
       }
     } catch (error) {
       console.error('Fetch bouquets error:', error);
-      alert('Gagal memuat data buket');
+      showToast.error('Gagal memuat data buket');
     } finally {
       setLoading(false);
     }
@@ -85,7 +102,7 @@ export default function BouquetsPage() {
       const data = await response.json();
 
       if (data.success) {
-        alert('Buket berhasil dihapus');
+        showToast.success('Buket berhasil dihapus');
         fetchStats();
         fetchBouquets();
       } else {
@@ -93,7 +110,7 @@ export default function BouquetsPage() {
       }
     } catch (error) {
       console.error('Delete error:', error);
-      alert('Gagal menghapus buket: ' + error.message);
+      showToast.error('Gagal menghapus buket: ' + error.message);
     }
   };
 
@@ -109,24 +126,24 @@ export default function BouquetsPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex flex-col gap-6 mb-6">
-        <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 sm:gap-6 mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Katalog Buket</h1>
-          <p className="text-gray-600 mt-1 text-sm">Kelola buket yang ditampilkan di website</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Katalog Buket</h1>
+          <p className="text-gray-600 mt-1 text-xs sm:text-sm">Kelola buket yang ditampilkan di website</p>
         </div>
         <button
           onClick={handleAdd}
-          className="bg-primary hover:bg-pink-600 text-white px-5 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 text-sm"
+          className="bg-primary hover:bg-pink-600 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 text-xs sm:text-sm w-full sm:w-auto justify-center touch-target"
         >
-          <span className="text-lg">+</span>
-          Tambah Buket Baru
+          <span className="text-base sm:text-lg">+</span>
+          <span>Tambah Buket Baru</span>
         </button>
         </div>
 
         {/* Stats Cards */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <StatsCard
               icon={({ className }) => (
                 <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,14 +235,15 @@ export default function BouquetsPage() {
 
       {/* Bouquets Grid */}
       {!loading && bouquets.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {bouquets.map((bouquet) => (
+        <>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {paginatedBouquets.map((bouquet) => (
             <div
               key={bouquet.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden"
+              className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden"
             >
               {/* Image */}
-              <div className="relative h-48 bg-gray-100">
+              <div className="relative h-40 sm:h-48 bg-gray-100">
                 {bouquet.image_url ? (
                   <Image
                     src={bouquet.image_url}
@@ -249,37 +267,52 @@ export default function BouquetsPage() {
               </div>
 
               {/* Content */}
-              <div className="p-5">
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{bouquet.name}</h3>
-                <p className="text-xl font-bold text-primary mb-3">{formatPrice(bouquet.price)}</p>
+              <div className="p-3 sm:p-5">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1 sm:mb-2 line-clamp-1">{bouquet.name}</h3>
+                <p className="text-lg sm:text-xl font-bold text-primary mb-2 sm:mb-3">{formatPrice(bouquet.price)}</p>
                 
                 {bouquet.description && (
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                  <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 line-clamp-2">
                     {bouquet.description}
                   </p>
                 )}
 
                 {/* Actions */}
-                <div className="flex gap-2 mt-4">
+                <div className="flex gap-2 mt-3 sm:mt-4">
                   <button
                     onClick={() => handleEdit(bouquet)}
-                    className="flex-1 bg-blue-50 text-blue-600 py-2 px-3 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm flex items-center justify-center gap-1.5"
+                    className="flex-1 bg-blue-50 text-blue-600 py-2 px-2 sm:px-3 rounded-lg hover:bg-blue-100 active:bg-blue-200 transition-colors font-medium text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-1.5 touch-target"
                   >
                     <span>✏️</span>
-                    Edit
+                    <span className="hidden sm:inline">Edit</span>
                   </button>
                   <button
                     onClick={() => handleDelete(bouquet.id, bouquet.name)}
-                    className="flex-1 bg-red-50 text-red-600 py-2 px-3 rounded-lg hover:bg-red-100 transition-colors font-medium text-sm flex items-center justify-center gap-1.5"
+                    className="flex-1 bg-red-50 text-red-600 py-2 px-2 sm:px-3 rounded-lg hover:bg-red-100 active:bg-red-200 transition-colors font-medium text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-1.5 touch-target"
                   >
                     <span>🗑️</span>
-                    Hapus
+                    <span className="hidden sm:inline">Hapus</span>
                   </button>
                 </div>
               </div>
             </div>
           ))}
         </div>
+
+        {/* Pagination */}
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+            totalItems={totalItems}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            perPage={perPage}
+            onPerPageChange={changePerPage}
+          />
+        </div>
+        </>
       )}
 
       {/* Modal */}

@@ -1,4 +1,4 @@
-'use client';
+ 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -79,58 +79,58 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1 text-sm">Ringkasan aktivitas toko hari ini</p>
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-600 mt-1 text-xs sm:text-sm">Ringkasan aktivitas toko hari ini</p>
       </div>
       
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-gray-600 text-xs font-medium">Menunggu<br/>Konfirmasi</h3>
-            <ClockIcon className="w-7 h-7 text-yellow-500" />
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-3 sm:p-5">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <h3 className="text-gray-600 text-[10px] sm:text-xs font-medium leading-tight">Menunggu<br/>Konfirmasi</h3>
+            <ClockIcon className="w-5 h-5 sm:w-7 sm:h-7 text-yellow-500" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">{stats.waiting}</p>
+          <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.waiting}</p>
         </div>
         
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-gray-600 text-xs font-medium">Terkonfirmasi</h3>
-            <CheckCircleIcon className="w-7 h-7 text-blue-500" />
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-3 sm:p-5">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <h3 className="text-gray-600 text-[10px] sm:text-xs font-medium leading-tight">Terkonfirmasi</h3>
+            <CheckCircleIcon className="w-5 h-5 sm:w-7 sm:h-7 text-blue-500" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">{stats.confirmed}</p>
+          <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.confirmed}</p>
         </div>
         
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-gray-600 text-xs font-medium">Sedang<br/>Dibuat</h3>
-            <CubeIcon className="w-7 h-7 text-purple-500" />
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-3 sm:p-5">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <h3 className="text-gray-600 text-[10px] sm:text-xs font-medium leading-tight">Sedang<br/>Dibuat</h3>
+            <CubeIcon className="w-5 h-5 sm:w-7 sm:h-7 text-purple-500" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">{stats.inProcess}</p>
+          <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.inProcess}</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-gray-600 text-xs font-medium">Siap<br/>Diambil</h3>
-            <CubeIcon className="w-7 h-7 text-green-500" />
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-3 sm:p-5">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <h3 className="text-gray-600 text-[10px] sm:text-xs font-medium leading-tight">Siap<br/>Diambil</h3>
+            <CubeIcon className="w-5 h-5 sm:w-7 sm:h-7 text-green-500" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">{stats.ready}</p>
+          <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.ready}</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-gray-600 text-xs font-medium">Selesai</h3>
-            <CheckIcon className="w-7 h-7 text-gray-500" />
+        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 p-3 sm:p-5">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <h3 className="text-gray-600 text-[10px] sm:text-xs font-medium leading-tight">Selesai</h3>
+            <CheckIcon className="w-5 h-5 sm:w-7 sm:h-7 text-gray-500" />
           </div>
-          <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
+          <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.completed}</p>
         </div>
       </div>
       
       {/* Recent Orders Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-bold text-gray-900">Pesanan Terbaru</h2>
+      <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+          <h2 className="text-base sm:text-lg font-bold text-gray-900">Pesanan Terbaru</h2>
         </div>
         <div className="overflow-x-auto">
           {recentOrders.length === 0 ? (
@@ -138,40 +138,40 @@ export default function DashboardPage() {
               <p className="text-gray-500 text-sm">Belum ada pesanan masuk</p>
             </div>
           ) : (
-            <table className="w-full">
+            <table className="w-full min-w-[640px]">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">Nama Pembeli</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">Buket</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">Tanggal Ambil</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">Status Pesanan</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">Status Pembayaran</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">Aksi</th>
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600">Nama Pembeli</th>
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600">Buket</th>
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600">Tanggal Ambil</th>
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600">Status Pesanan</th>
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600">Status Pembayaran</th>
+                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 {recentOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">
                       {order.customer_name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-700">
                       {order.bouquet_name || order.custom_bouquet_type || 'Custom'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600">
                       {new Date(order.pickup_date).toLocaleDateString('id-ID', { 
                         day: 'numeric', 
                         month: 'short', 
                         year: 'numeric' 
                       })}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                       {getStatusBadge(order.order_status)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                       {getPaymentBadge(order.payment_status)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm">
                       <Link 
                         href={`/orders/${order.id}`}
                         className="text-primary hover:text-pink-700 font-semibold transition-colors inline-flex items-center gap-1"

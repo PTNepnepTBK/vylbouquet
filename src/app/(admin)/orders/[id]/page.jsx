@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { useToast } from '../../../../hooks/useToast';
 
 export default function OrderDetailPage({ params }) {
   const router = useRouter();
+  const showToast = useToast(); // Toast notifications
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -24,11 +26,11 @@ export default function OrderDetailPage({ params }) {
       if (data.success) {
         setOrder(data.data);
       } else {
-        alert('Error: ' + data.message);
+        showToast.error('Error: ' + data.message);
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Gagal memuat detail pesanan');
+      showToast.error('Gagal memuat detail pesanan');
     } finally {
       setLoading(false);
     }
@@ -47,14 +49,14 @@ export default function OrderDetailPage({ params }) {
       
       const data = await response.json();
       if (data.success) {
-        alert('Status berhasil diupdate!');
+        showToast.success('Status berhasil diupdate!');
         fetchOrderDetail();
       } else {
-        alert('Error: ' + data.message);
+        showToast.error('Error: ' + data.message);
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Gagal update status');
+      showToast.error('Gagal update status');
     } finally {
       setUpdating(false);
     }
@@ -73,14 +75,14 @@ export default function OrderDetailPage({ params }) {
       
       const data = await response.json();
       if (data.success) {
-        alert('Pembayaran ditandai lunas!');
+        showToast.success('Pembayaran ditandai lunas!');
         fetchOrderDetail();
       } else {
-        alert('Error: ' + data.message);
+        showToast.error('Error: ' + data.message);
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Gagal update pembayaran');
+      showToast.error('Gagal update pembayaran');
     } finally {
       setUpdating(false);
     }
@@ -152,31 +154,31 @@ export default function OrderDetailPage({ params }) {
   return (
     <div className="max-w-6xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <Link href="/orders" className="text-primary hover:text-pink-700 flex items-center gap-2 mb-4">
-          <ArrowLeftIcon className="w-5 h-5" />
+      <div className="mb-4 sm:mb-8">
+        <Link href="/orders" className="text-primary hover:text-pink-700 flex items-center gap-2 mb-3 sm:mb-4 text-sm sm:text-base touch-target">
+          <ArrowLeftIcon className="w-4 h-4 sm:w-5 sm:h-5" />
           <span>Kembali ke Daftar Pesanan</span>
         </Link>
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Detail Pesanan {order.order_number}</h1>
             <p className="text-gray-600 mt-1">
               Dibuat pada {formatDate(order.created_at)}
             </p>
           </div>
-          <span className={`px-4 py-2 rounded-lg text-sm font-semibold ${getStatusBadge(order.order_status)}`}>
+          <span className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap ${getStatusBadge(order.order_status)}`}>
             {getStatusLabel(order.order_status)}
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Main Info */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           {/* Customer Info */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">Informasi Pembeli</h2>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg lg:text-xl font-bold mb-3 sm:mb-4">Informasi Pembeli</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <p className="text-sm text-gray-500">Nama Pembeli</p>
                 <p className="font-semibold">{order.customer_name}</p>
@@ -193,16 +195,16 @@ export default function OrderDetailPage({ params }) {
           </div>
 
           {/* Order Details */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">Detail Pesanan</h2>
-            <div className="space-y-4">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg lg:text-xl font-bold mb-3 sm:mb-4">Detail Pesanan</h2>
+            <div className="space-y-3 sm:space-y-4">
               <div>
-                <p className="text-sm text-gray-500">Buket yang Dipesan</p>
-                <p className="font-semibold text-lg">{order.bouquet?.name || 'Custom'}</p>
-                <p className="text-primary font-bold text-xl mt-1">{formatPrice(order.bouquet_price)}</p>
+                <p className="text-xs sm:text-sm text-gray-500">Buket yang Dipesan</p>
+                <p className="font-semibold text-base sm:text-lg">{order.bouquet?.name || 'Custom'}</p>
+                <p className="text-primary font-bold text-lg sm:text-xl mt-1">{formatPrice(order.bouquet_price)}</p>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Tanggal Ambil</p>
                   <p className="font-semibold">{formatDate(order.pickup_date)}</p>
@@ -232,9 +234,9 @@ export default function OrderDetailPage({ params }) {
           </div>
 
           {/* Payment Info */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">Informasi Pembayaran</h2>
-            <div className="space-y-3">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg lg:text-xl font-bold mb-3 sm:mb-4">Informasi Pembayaran</h2>
+            <div className="space-y-2 sm:space-y-3 text-sm sm:text-base">
               <div className="flex justify-between">
                 <span className="text-gray-600">Jenis Pembayaran</span>
                 <span className="font-semibold">{order.payment_type === 'DP' ? 'DP (Down Payment)' : 'Lunas'}</span>
@@ -272,14 +274,14 @@ export default function OrderDetailPage({ params }) {
 
           {/* Images Section */}
           {order.images && order.images.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold mb-4">Gambar Pesanan</h2>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+              <h2 className="text-base sm:text-lg lg:text-xl font-bold mb-3 sm:mb-4">Gambar Pesanan</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {/* Foto Buket yang Diinginkan */}
                 {order.images.filter(img => img.image_type === 'DESIRED_BOUQUET').map((img, idx) => (
                   <div key={img.id}>
-                    <p className="text-sm text-gray-500 mb-2">Foto Buket yang Diinginkan {idx + 1}</p>
-                    <div className="relative h-48 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-purple-200">
+                    <p className="text-xs sm:text-sm text-gray-500 mb-2">Foto Buket yang Diinginkan {idx + 1}</p>
+                    <div className="relative h-40 sm:h-48 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-purple-200 touch-target">
                       <Image 
                         src={img.image_url} 
                         alt={`Buket Diinginkan ${idx + 1}`}
@@ -326,36 +328,68 @@ export default function OrderDetailPage({ params }) {
             </div>
           )}
 
-          {/* Bouquet Image from Catalog */}
-          {order.bouquet && order.bouquet.image_url && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold mb-4">Buket dari Katalog</h2>
-              <div>
-                <p className="text-sm text-gray-500 mb-2">{order.bouquet.name}</p>
-                <div className="relative h-64 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-pink-200">
-                  <Image 
-                    src={order.bouquet.image_url} 
-                    alt={order.bouquet.name}
-                    fill
-                    className="object-cover"
-                    onClick={() => window.open(order.bouquet.image_url, '_blank')}
-                  />
+          {/* Gambar Buket Yang Diinginkan (ambil dari order.images dengan image_type 'DESIRED_BOUQUET') */}
+          {(() => {
+            const desiredImgs = (order.images || []).filter(img => img.image_type === 'DESIRED_BOUQUET');
+            if (desiredImgs.length > 0) {
+              return (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-xl font-bold mb-4">Pesanan Buket Customer</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {desiredImgs.map((img, idx) => (
+                      <div key={img.id || idx}>
+                        <p className="text-sm text-gray-500 mb-2">{idx + 1}. Foto Buket yang Diinginkan</p>
+                        <div className="relative h-64 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-pink-200">
+                          <Image
+                            src={img.image_url}
+                            alt={img.caption || `Buket Diinginkan ${idx + 1}`}
+                            fill
+                            className="object-cover"
+                            onClick={() => window.open(img.image_url, '_blank')}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              );
+            }
+
+            // Fallback to bouquet image if no desired images uploaded
+            if (order.bouquet && order.bouquet.image_url) {
+              return (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-xl font-bold mb-4">Pesanan Buket</h2>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-2">{order.bouquet.name}</p>
+                    <div className="relative h-64 bg-gray-100 rounded overflow-hidden cursor-pointer hover:opacity-90 border border-pink-200">
+                      <Image
+                        src={order.bouquet.image_url}
+                        alt={order.bouquet.name}
+                        fill
+                        className="object-cover"
+                        onClick={() => window.open(order.bouquet.image_url, '_blank')}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
+          })()}
         </div>
 
         {/* Actions Sidebar */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-bold mb-4">Aksi</h2>
-            <div className="space-y-3">
+        <div className="space-y-4 sm:space-y-6">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Aksi</h2>
+            <div className="space-y-2 sm:space-y-3">
               {order.order_status === 'WAITING_CONFIRMATION' && (
                 <button
                   onClick={() => updateOrderStatus('PAYMENT_CONFIRMED')}
                   disabled={updating}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-sm sm:text-base font-medium touch-target transition-colors"
                 >
                   ✓ Konfirmasi Pembayaran
                 </button>
@@ -365,7 +399,7 @@ export default function OrderDetailPage({ params }) {
                 <button
                   onClick={() => updateOrderStatus('IN_PROCESS')}
                   disabled={updating}
-                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 active:bg-purple-800 disabled:opacity-50 text-sm sm:text-base font-medium touch-target transition-colors"
                 >
                   🛠️ Tandai Dalam Proses
                 </button>
@@ -375,7 +409,7 @@ export default function OrderDetailPage({ params }) {
                 <button
                   onClick={() => updateOrderStatus('READY_FOR_PICKUP')}
                   disabled={updating}
-                  className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 disabled:opacity-50 text-sm sm:text-base font-medium touch-target transition-colors"
                 >
                   ✓ Tandai Siap Diambil
                 </button>
@@ -385,7 +419,7 @@ export default function OrderDetailPage({ params }) {
                 <button
                   onClick={() => updateOrderStatus('COMPLETED')}
                   disabled={updating}
-                  className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 active:bg-gray-800 disabled:opacity-50 text-sm sm:text-base font-medium touch-target transition-colors"
                 >
                   ✓ Tandai Selesai
                 </button>
@@ -395,7 +429,7 @@ export default function OrderDetailPage({ params }) {
                 <button
                   onClick={markAsFullyPaid}
                   disabled={updating}
-                  className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 disabled:opacity-50 text-sm sm:text-base font-medium touch-target transition-colors"
                 >
                   💰 Tandai Pelunasan Dibayar
                 </button>
@@ -405,7 +439,7 @@ export default function OrderDetailPage({ params }) {
                 <button
                   onClick={() => updateOrderStatus('CANCELLED')}
                   disabled={updating}
-                  className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 active:bg-red-800 disabled:opacity-50 text-sm sm:text-base font-medium touch-target transition-colors"
                 >
                   ✗ Batalkan Pesanan
                 </button>
@@ -414,9 +448,9 @@ export default function OrderDetailPage({ params }) {
           </div>
 
           {/* Order Timeline */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-bold mb-4">Status History</h2>
-            <div className="space-y-3 text-sm">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Status History</h2>
+            <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
               <div className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
                 <div>

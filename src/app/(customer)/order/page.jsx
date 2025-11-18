@@ -1,33 +1,36 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
-import NavBar from '../../../components/ui/NavBar';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
+import NavBar from "../../../components/ui/NavBar";
+import { useToast } from "../../../hooks/useToast";
 
 export default function OrderPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const bouquetIdParam = searchParams.get('bouquet_id');
+  const bouquetIdParam = searchParams.get("bouquet_id");
+  const showToast = useToast(); // Toast notifications
 
   const [bouquets, setBouquets] = useState([]);
+  const [settings, setSettings] = useState(null);
   const [selectedBouquet, setSelectedBouquet] = useState(null);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
-    customer_name: '',
-    bouquet_id: bouquetIdParam || '',
-    pickup_date: '',
-    pickup_time: '',
-    card_message: '',
-    additional_request: '',
-    payment_type: 'DP',
-    sender_name: '',
-    sender_account_number: '',
-    sender_phone: '',
-    payment_method: '',
+    customer_name: "",
+    bouquet_id: bouquetIdParam || "",
+    pickup_date: "",
+    pickup_time: "",
+    card_message: "",
+    additional_request: "",
+    payment_type: "DP",
+    sender_name: "",
+    sender_account_number: "",
+    sender_phone: "",
+    payment_method: "",
   });
 
   const [referenceFiles, setReferenceFiles] = useState([]);
@@ -35,102 +38,71 @@ export default function OrderPage() {
   const [desiredBouquetFiles, setDesiredBouquetFiles] = useState([]);
 
   useEffect(() => {
-    fetchBouquets();
-    fetchPaymentMethods();
+    // Load bouquets and settings in parallel for faster startup
+    const loadInitial = async () => {
+      try {
+        const [bouqRes, setRes] = await Promise.all([
+          fetch("/api/bouquets"),
+          fetch("/api/settings"),
+        ]);
+        const bouqJson = await bouqRes.json().catch(() => null);
+        const setJson = await setRes.json().catch(() => null);
+
+        if (bouqJson && bouqJson.success)
+          setBouquets(bouqJson.data.filter((b) => b.is_active));
+        if (setJson && setJson.success) setSettings(setJson.data || {});
+      } catch (err) {
+        console.warn("Initial load failed", err);
+      }
+    };
+
+    loadInitial();
   }, []);
 
   useEffect(() => {
     if (bouquetIdParam && bouquets.length > 0) {
-      const bouquet = bouquets.find(b => b.id === parseInt(bouquetIdParam));
+      const bouquet = bouquets.find((b) => b.id === parseInt(bouquetIdParam));
       if (bouquet) {
         setSelectedBouquet(bouquet);
-        setFormData(prev => ({ ...prev, bouquet_id: bouquetIdParam }));
+        setFormData((prev) => ({ ...prev, bouquet_id: bouquetIdParam }));
       }
     }
   }, [bouquetIdParam, bouquets]);
 
-  const fetchBouquets = async () => {
-    try {
-      const response = await fetch('/api/bouquets');
-      const data = await response.json();
-      if (data.success) {
-        setBouquets(data.data.filter(b => b.is_active));
-      }
-    } catch (error) {
-      console.error('Error fetching bouquets:', error);
-    }
-  };
-
-  const fetchPaymentMethods = async () => {
-    try {
-      const response = await fetch('/api/settings');
-      const data = await response.json();
-      if (data.success) {
-        // Filter settings yang merupakan payment methods
-        const methods = [];
-        const settingsData = data.data;
-        
-        // List of possible payment method keys
-        const paymentKeys = ['payment_bca', 'payment_seabank', 'payment_shopeepay', 'payment_gopay', 'payment_dana', 'payment_ovo'];
-        
-        paymentKeys.forEach(key => {
-          if (settingsData[key]) {
-            const methodName = key.replace('payment_', '').toUpperCase();
-            const descKey = key + '_desc';
-            methods.push({
-              key: methodName,
-              value: settingsData[key],
-              description: settingsData[descKey] || '',
-              label: methodName === 'SHOPEEPAY' ? 'ShopeePay' : methodName.charAt(0) + methodName.slice(1).toLowerCase()
-            });
-          }
-        });
-        
-        setPaymentMethods(methods);
-      }
-    } catch (error) {
-      console.error('Error fetching payment methods:', error);
-    }
-  };
-
   const handleBouquetChange = (e) => {
     const bouquetId = e.target.value;
-    setFormData({ ...formData, bouquet_id: bouquetId });
-    const bouquet = bouquets.find(b => b.id === parseInt(bouquetId));
+    setFormData((prev) => ({ ...prev, bouquet_id: bouquetId }));
+    const bouquet = bouquets.find((b) => b.id === parseInt(bouquetId));
     setSelectedBouquet(bouquet);
   };
 
   const handleFileChange = (e, type) => {
-    const files = Array.from(e.target.files);
-    if (type === 'reference') {
-      setReferenceFiles(files);
-    } else if (type === 'payment') {
-      setPaymentFiles(files);
-    } else if (type === 'desired') {
-      setDesiredBouquetFiles(files);
-    }
+    const files = Array.from(e.target.files || []);
+    if (type === "reference") setReferenceFiles(files);
+    else if (type === "payment") setPaymentFiles(files);
+    else if (type === "desired") setDesiredBouquetFiles(files);
   };
 
   const uploadFiles = async (files, type) => {
-    if (files.length === 0) return [];
+    if (!files || files.length === 0) return [];
 
     setUploading(true);
-    const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
-    formData.append('type', 'orders');
+    const fd = new FormData();
+    files.forEach((file) => fd.append("files", file));
+    fd.append("type", "orders");
 
     try {
-      const response = await fetch('/api/upload/multiple', {
-        method: 'POST',
-        body: formData,
+      const response = await fetch("/api/upload/multiple", {
+        method: "POST",
+        body: fd,
       });
-      const data = await response.json();
-      if (data.success) {
-        return data.urls;
-      }
-      throw new Error(data.message);
+      const data = await response.json().catch(() => null);
+      if (data && data.success) return data.urls || [];
+      throw new Error((data && data.message) || "Upload failed");
     } catch (error) {
-      alert(`Error uploading ${type} images: ${error.message}`);
+      showToast.error(
+        `Gagal upload gambar ${type}: ${error?.message || error}`
+      );
       return [];
     } finally {
       setUploading(false);
@@ -139,26 +111,21 @@ export default function OrderPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate payment proof
-    if (paymentFiles.length === 0) {
-      alert('Harap upload bukti transfer/DP terlebih dahulu');
+
+    if (!paymentFiles || paymentFiles.length === 0) {
+      showToast.error("Harap upload bukti transfer/DP terlebih dahulu");
       return;
     }
-    
+
     setLoading(true);
-
     try {
-      // Upload desired bouquet images
-      const desiredUrls = await uploadFiles(desiredBouquetFiles, 'desired');
-      
-      // Upload reference images
-      const refUrls = await uploadFiles(referenceFiles, 'reference');
-      
-      // Upload payment proof images
-      const payUrls = await uploadFiles(paymentFiles, 'payment');
+      // Run uploads in parallel
+      const [desiredUrls, refUrls, payUrls] = await Promise.all([
+        uploadFiles(desiredBouquetFiles, "desired"),
+        uploadFiles(referenceFiles, "reference"),
+        uploadFiles(paymentFiles, "payment"),
+      ]);
 
-      // Create order
       const orderData = {
         ...formData,
         desired_bouquet_images: desiredUrls,
@@ -166,205 +133,414 @@ export default function OrderPage() {
         payment_proofs: payUrls,
       };
 
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderData),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
+      if (!data) throw new Error("Response tidak valid");
+      if (!data.success)
+        throw new Error(data.message || "Gagal membuat pesanan");
 
-      if (data.success) {
-        alert(`Pesanan berhasil dibuat!\nNomor Order: ${data.data.order_number}`);
-        router.push('/order-success');
-      } else {
-        throw new Error(data.message);
+      const saved = data.data || data;
+      try {
+        localStorage.setItem("lastOrder", JSON.stringify(saved));
+        const idKey = saved?.order_number || saved?.id || saved?.order_id || "";
+        if (idKey) localStorage.setItem("lastOrderId", String(idKey));
+      } catch (err) {
+        console.warn("Could not save lastOrder", err);
       }
+
+      showToast.success(
+        `Pesanan berhasil! Nomor Order: ${saved.order_number || saved.id || ""}`
+      );
+      router.push("/order-success");
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      showToast.error(`Error: ${error?.message || error}`);
     } finally {
       setLoading(false);
     }
   };
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
       minimumFractionDigits: 0,
     }).format(price);
   };
 
-  const calculatePayment = () => {
+  const payment = useMemo(() => {
     if (!selectedBouquet) return { dp: 0, remaining: 0, total: 0 };
-    const total = parseFloat(selectedBouquet.price);
-    const dp = formData.payment_type === 'DP' ? total * 0.3 : total;
-    const remaining = formData.payment_type === 'DP' ? total - dp : 0;
+    const total = parseFloat(selectedBouquet.price) || 0;
+    const dp = formData.payment_type === "DP" ? total * 0.3 : total;
+    const remaining = formData.payment_type === "DP" ? total - dp : 0;
     return { dp, remaining, total };
-  };
-
-  const payment = calculatePayment();
+  }, [selectedBouquet, formData.payment_type]);
 
   return (
-    <div className="min-h-screen bg-amber-50 py-12 px-4">
+    <>
+      {/* Navbar */}
       <div className="relative z-20">
         <NavBar />
       </div>
 
-      <div className="max-w-6xl mx-auto pt-14">
-        <h1 className="text-4xl font-serif font-bold text-center mb-2">Form Pemesanan</h1>
-        <p className="text-center text-amber-700 mb-8">Lengkapi data pesanan Anda</p>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left: Form (span 2 columns on large) */}
-          <div className="lg:col-span-2">
-            <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-6 lg:p-8 border border-pink-100">
-              <div className="text-lg font-semibold mb-4 px-2">Detail Pesanan</div>
-
-              {/* Pilih Buket */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Nama Pembeli *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.customer_name}
-                  onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
-                  className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200"
-                  placeholder="Masukkan nama lengkap Anda"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Upload Foto Buket yang Diinginkan</label>
-                <p className="text-xs text-gray-500 mb-2">Upload foto contoh buket yang Anda inginkan (opsional)</p>
-                <input type="file" accept="image/*" multiple onChange={(e) => handleFileChange(e, 'desired')} className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md" />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Pilih Buket *</label>
-                <select
-                  required
-                  value={formData.bouquet_id}
-                  onChange={handleBouquetChange}
-                  className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200"
-                >
-                  <option value="">Pilih buket yang Anda inginkan</option>
-                  {bouquets.map(bouquet => (
-                    <option key={bouquet.id} value={bouquet.id}>{bouquet.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Tanggal Ambil *</label>
-                  <input type="date" required value={formData.pickup_date} onChange={(e) => setFormData({ ...formData, pickup_date: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Jam Ambil *</label>
-                  <input type="time" required value={formData.pickup_time} onChange={(e) => setFormData({ ...formData, pickup_time: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200" />
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Pesan Untuk Kartu Ucapan</label>
-                <textarea value={formData.card_message} onChange={(e) => setFormData({ ...formData, card_message: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200" rows={3} placeholder="Tulis pesan untuk kartu ucapan" />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Foto Request Tambahan (Opsional)</label>
-                <input type="file" accept="image/*" multiple onChange={(e) => handleFileChange(e, 'reference')} className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md" />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Request Tambahan (Opsional)</label>
-                <input type="text" value={formData.additional_request} onChange={(e) => setFormData({ ...formData, additional_request: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200" placeholder="Jelaskan request khusus untuk buket Anda" />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Tipe Pembayaran *</label>
-                <select value={formData.payment_type} onChange={(e) => setFormData({ ...formData, payment_type: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200">
-                  <option value="DP">Bayar DP 30%</option>
-                  <option value="FULL">Lunas</option>
-                </select>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Nama Pengirim / No Rekening *</label>
-                <input type="text" required value={formData.sender_name} onChange={(e) => setFormData({ ...formData, sender_name: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200" placeholder="Nama pengirim" />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Nomor WhatsApp *</label>
-                <input type="tel" required value={formData.sender_phone} onChange={(e) => setFormData({ ...formData, sender_phone: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200" placeholder="08xxxxxxxxxx" />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Metode Pembayaran *</label>
-                <select required value={formData.payment_method} onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })} className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200">
-                  <option value="">Pilih metode pembayaran</option>
-                  {paymentMethods.map(method => (
-                    <option key={method.key} value={method.key}>{method.label} - {method.value}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Upload Bukti Transfer / DP *</label>
-                <input type="file" accept="image/*" multiple required onChange={(e) => handleFileChange(e, 'payment')} className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md" />
-              </div>
-
-              <button type="submit" disabled={loading || uploading} className="w-full bg-pink-400 hover:bg-pink-500 text-white font-semibold py-3 rounded-md mt-4">
-                {uploading ? 'Mengupload gambar...' : loading ? 'Memproses pesanan...' : 'Kirim Pesanan Anda'}
-              </button>
-            </form>
+      {/* Main Content */}
+      <div className="min-h-screen py-12 px-3 sm:px-4 md:px-6 font-serif bg-gray-50">
+        <div className="max-w-6xl mx-auto pt-16 md:pt-20">
+          {/* Header */}
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-gray-900 mb-2">
+              Form Pemesanan
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600">
+              Lengkapi data pesanan Anda
+            </p>
           </div>
 
-          {/* Right: Sidebar */}
-          <aside className="space-y-6">
-            <div className="p-4 bg-pink-100 rounded-lg border border-pink-200">
-              <h3 className="font-semibold mb-2">Ringkasan Pembayaran</h3>
-              <div className="text-sm space-y-2">
-                <div className="flex justify-between"><span>Harga Buket</span><span>{selectedBouquet ? formatPrice(payment.total) : 'Rp ...'}</span></div>
-                {formData.payment_type === 'DP' && (
-                  <>
-                    <div className="flex justify-between text-sm"><span>DP (30%)</span><span>{selectedBouquet ? formatPrice(payment.dp) : 'Rp ...'}</span></div>
-                    <div className="flex justify-between text-sm"><span>Sisa</span><span>{selectedBouquet ? formatPrice(payment.remaining) : 'Rp ...'}</span></div>
-                  </>
-                )}
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
+            {/* Form - Span 2 kolom di desktop */}
+            <div className="lg:col-span-2">
+              <form
+                onSubmit={handleSubmit}
+                className="bg-white rounded-lg md:rounded-xl shadow-md md:shadow-lg p-4 sm:p-5 md:p-6 lg:p-8 border border-pink-100"
+              >
+                <div className="text-base sm:text-lg font-semibold mb-3 md:mb-4 text-gray-900">
+                  Detail Pesanan
+                </div>
+
+                {/* Nama Pembeli */}
+                <div className="mb-3 md:mb-4">
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
+                    Nama Pembeli *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.customer_name}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        customer_name: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target"
+                    placeholder="Masukkan nama lengkap Anda"
+                  />
+                </div>
+
+                <div className="mb-3 md:mb-4">
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
+                    Upload Foto Buket yang Diinginkan
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Upload foto contoh buket yang Anda inginkan (opsional)
+                  </p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleFileChange(e, "desired")}
+                    className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md text-xs sm:text-sm touch-target cursor-pointer hover:border-pink-300 transition-colors"
+                  />
+                </div>
+
+                <div className="mb-3 md:mb-4">
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
+                    Pilih Buket *
+                  </label>
+                  <select
+                    required
+                    value={formData.bouquet_id}
+                    onChange={handleBouquetChange}
+                    className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target cursor-pointer bg-white"
+                  >
+                    <option value="">Pilih buket yang Anda inginkan</option>
+                    {bouquets.map((bouquet) => (
+                      <option key={bouquet.id} value={bouquet.id}>
+                        {bouquet.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-3 md:mb-4">
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
+                      Tanggal Ambil *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.pickup_date}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          pickup_date: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
+                      Jam Ambil *
+                    </label>
+                    <input
+                      type="time"
+                      required
+                      value={formData.pickup_time}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          pickup_time: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target"
+                    />
+                  </div>
+                </div>
+
+                <div className="mb-3 md:mb-4">
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
+                    Pesan Untuk Kartu Ucapan
+                  </label>
+                  <textarea
+                    value={formData.card_message}
+                    onChange={(e) =>
+                      setFormData({ ...formData, card_message: e.target.value })
+                    }
+                    className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base resize-none"
+                    rows={3}
+                    placeholder="Tulis pesan untuk kartu ucapan"
+                  />
+                </div>
+
+                <div className="mb-3 md:mb-4">
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
+                    Foto Request Tambahan (Opsional)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleFileChange(e, "reference")}
+                    className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md text-xs sm:text-sm touch-target cursor-pointer hover:border-pink-300 transition-colors"
+                  />
+                </div>
+
+                <div className="mb-3 md:mb-4">
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
+                    Request Tambahan (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.additional_request}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        additional_request: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target"
+                    placeholder="Jelaskan request khusus untuk buket Anda"
+                  />
+                </div>
+
+                <div className="mb-3 md:mb-4">
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
+                    Tipe Pembayaran *
+                  </label>
+                  <select
+                    value={formData.payment_type}
+                    onChange={(e) =>
+                      setFormData({ ...formData, payment_type: e.target.value })
+                    }
+                    className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target cursor-pointer bg-white"
+                  >
+                    <option value="DP">Bayar DP 30%</option>
+                    <option value="FULL">Lunas</option>
+                  </select>
+                </div>
+
+                <div className="mb-3 md:mb-4">
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
+                    Nama Pengirim / No Rekening *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.sender_name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sender_name: e.target.value })
+                    }
+                    className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target"
+                    placeholder="Nama pengirim"
+                  />
+                </div>
+
+                <div className="mb-3 md:mb-4">
+                  <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
+                    Nomor WhatsApp *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={formData.sender_phone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sender_phone: e.target.value })
+                    }
+                    className="w-full px-3 py-2.5 md:py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-300 focus:border-pink-400 transition-all text-sm sm:text-base touch-target"
+                    placeholder="08xxxxxxxxxx"
+                  />
+                </div>
+
+                <select
+                  required
+                  value={formData.payment_method}
+                  onChange={(e) =>
+                    setFormData({ ...formData, payment_method: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-pink-200 rounded-md focus:ring-2 focus:ring-pink-200"
+                >
+                  <option value="">Pilih metode pembayaran</option>
+
+                  <option value="bca">
+                    BCA: {settings?.bank_bca || "—"}{" "}
+                    {settings?.bank_bca_name
+                      ? `(a.n ${settings.bank_bca_name})`
+                      : ""}
+                  </option>
+
+                  <option value="seabank">
+                    SeaBank: {settings?.bank_seabank || "—"}{" "}
+                    {settings?.bank_seabank_name
+                      ? `(a.n ${settings.bank_seabank_name})`
+                      : ""}
+                  </option>
+
+                  <option value="shopeepay">
+                    ShopeePay: {settings?.ewallet_shopeepay || "—"}{" "}
+                    {settings?.ewallet_shopeepay_name
+                      ? `(a.n ${settings.ewallet_shopeepay_name})`
+                      : ""}
+                  </option>
+                </select>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">
+                    Upload Bukti Transfer / DP *
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    required
+                    onChange={(e) => handleFileChange(e, "payment")}
+                    className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || uploading}
+                  className="w-full bg-pink-400 hover:bg-pink-500 active:bg-pink-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-3 md:py-3.5 rounded-lg md:rounded-xl mt-4 md:mt-6 transition-all hover:shadow-lg text-sm sm:text-base touch-target"
+                >
+                  {uploading
+                    ? "Mengupload gambar..."
+                    : loading
+                    ? "Memproses pesanan..."
+                    : "Kirim Pesanan Anda"}
+                </button>
+              </form>
             </div>
 
-            <div className="p-4 bg-white rounded-lg border border-pink-200">
-              <h3 className="font-semibold mb-2">Metode Pembayaran</h3>
-              <div className="text-sm space-y-3">
-                {paymentMethods.length > 0 ? (
-                  paymentMethods.map(method => (
-                    <div key={method.key} className="pb-2 border-b border-pink-100 last:border-0">
-                      <div><strong>{method.label}:</strong> {method.value}</div>
-                      {method.description && (
-                        <div className="text-xs text-pink-500 mt-1">{method.description}</div>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500">Memuat metode pembayaran...</p>
-                )}
+            {/* Sidebar - Stack di mobile, sidebar di desktop */}
+            <aside className="space-y-4 md:space-y-6">
+              <div className="p-4 md:p-5 bg-pink-50 rounded-lg border border-pink-200 shadow-sm">
+                <h3 className="text-sm sm:text-base font-semibold mb-2 md:mb-3 text-gray-900">
+                  Ringkasan Pembayaran
+                </h3>
+                <div className="text-xs sm:text-sm space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Harga Buket</span>
+                    <span className="font-semibold text-gray-900">
+                      {selectedBouquet ? formatPrice(payment.total) : "Rp ..."}
+                    </span>
+                  </div>
+                  {formData.payment_type === "DP" && (
+                    <>
+                      <div className="flex justify-between items-center pt-2 border-t border-pink-200">
+                        <span className="text-gray-600">DP (30%)</span>
+                        <span className="font-bold text-pink-500">
+                          {selectedBouquet ? formatPrice(payment.dp) : "Rp ..."}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-500">Sisa Pembayaran</span>
+                        <span className="text-gray-700">
+                          {selectedBouquet
+                            ? formatPrice(payment.remaining)
+                            : "Rp ..."}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div className="p-4 bg-white rounded-lg border border-pink-200">
-              <h3 className="font-semibold mb-2">Ketentuan Pemesanan</h3>
-              <ul className="text-sm list-disc pl-5 space-y-2 text-gray-600">
-                <li>DP minimal 30% dari total harga untuk mengunci pesanan</li>
-                <li>Pesanan dianggap diterima setelah DP dikonfirmasi</li>
-                <li>Pelunasan bisa dilakukan saat ambil atau H-1</li>
-                <li>Jika diambil orang lain, wajib tunjukkan form order dan foto buket</li>
-              </ul>
-            </div>
-          </aside>
+              <div className="p-4 md:p-5 bg-white rounded-lg border border-gray-200 shadow-sm">
+                <h3 className="text-sm sm:text-base font-semibold mb-2 md:mb-3 text-gray-900">
+                  Metode Pembayaran
+                </h3>
+                <div className="text-xs sm:text-sm space-y-2">
+                  <div>
+                    <strong>BCA:</strong> {settings?.bank_bca || "—"}
+                    {settings?.bank_bca_name
+                      ? ` a.n ${settings.bank_bca_name}`
+                      : ""}
+                  </div>
+                  <div>
+                    <strong>SeaBank:</strong> {settings?.bank_seabank || "—"}
+                    {settings?.bank_seabank_name
+                      ? ` a.n ${settings.bank_seabank_name}`
+                      : ""}
+                  </div>
+                  <div>
+                    <strong>ShopePay:</strong>{" "}
+                    {settings?.ewallet_shopeepay || "—"}
+                    {settings?.ewallet_shopeepay_name
+                      ? ` a.n ${settings.ewallet_shopeepay_name}`
+                      : ""}
+                  </div>
+                  <p className="text-xs text-pink-400 mt-2">
+                    Transfer dari bank dikenakan biaya admin +Rp 1.000
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 md:p-5 bg-white rounded-lg border border-gray-200 shadow-sm">
+                <h3 className="text-sm sm:text-base font-semibold mb-2 md:mb-3 text-gray-900">
+                  Ketentuan Pemesanan
+                </h3>
+                <ul className="text-xs sm:text-sm list-disc pl-4 md:pl-5 space-y-1.5 md:space-y-2 text-gray-600">
+                  <li>
+                    DP minimal 30% dari total harga untuk mengunci pesanan
+                  </li>
+                  <li>Pesanan dianggap diterima setelah DP dikonfirmasi</li>
+                  <li>Pelunasan bisa dilakukan saat ambil atau H-1</li>
+                  <li>
+                    Jika diambil orang lain, wajib tunjukkan form order dan foto
+                    buket
+                  </li>
+                </ul>
+              </div>
+            </aside>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
