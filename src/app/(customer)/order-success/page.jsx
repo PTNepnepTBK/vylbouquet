@@ -110,21 +110,26 @@ export default function OrderSuccessPage() {
   const paid = order?.total_paid || order?.paid || 0;
   const remaining = Math.max(0, total - paid);
 
-  // Generate WhatsApp URL using the same format function
-  const whatsappNumber = '6282180881698'; // +62 821-8088-1698
-  const orderForWhatsApp = {
-    order_number: order?.order_number || order?.id,
-    customer_name: order?.customer_name || order?.name,
-    bouquet_name: order?.bouquet_name || order?.bouquet?.name,
-    bouquet_price: total,
-    payment_type: order?.payment_type,
-    pickup_date: order?.pickup_date || order?.pickupDate,
-    pickup_time: order?.pickup_time || order?.pickupTime,
-  };
+  // Build WhatsApp message to fixed number
+  const whatsappNumber = '6289661175822';
+  const paymentProofs = order?.payment_proofs || order?.paymentProofs || order?.payment_proof || order?.paymentProof || [];
+  let proofText = '-';
+  if (Array.isArray(paymentProofs) && paymentProofs.length > 0) proofText = paymentProofs.join(', ');
+  else if (typeof paymentProofs === 'string' && paymentProofs) proofText = paymentProofs;
 
-  // Import and use the same WhatsApp message format
-  const { formatOrderWhatsAppMessage } = require('../../../lib/whatsapp');
-  const whatsappMessage = formatOrderWhatsAppMessage(orderForWhatsApp);
+  const notes = order?.additional_request || order?.note || order?.notes || order?.message || '-';
+
+  const whatsappMessage = [
+    `Nama pembeli: ${order?.customer_name || order?.name || '-'}`,
+    `Produk yang dipesan: ${order?.bouquet_name || order?.bouquet?.name || '-'}`,
+    `Harga: ${formatPrice(total)}`,
+    `DP: ${formatPrice(paid)}`,
+    `Sisa pembayaran: ${formatPrice(remaining)}`,
+    `Tanggal pengambilan: ${order?.pickup_date || order?.pickupDate || '-'}`,
+    `Bukti transfer: ${proofText}`,
+    `Catatan tambahan: ${notes}`
+  ].join('\n');
+
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`;
 
   return (
