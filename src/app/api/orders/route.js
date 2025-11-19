@@ -29,6 +29,12 @@ export async function GET(request) {
     // Get query parameters untuk filter
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
+    const paymentStatus = searchParams.get("payment_status");
+    const pickupDateFrom = searchParams.get("pickup_date_from");
+    const pickupDateTo = searchParams.get("pickup_date_to");
+    const pickupTimeFrom = searchParams.get("pickup_time_from");
+    const pickupTimeTo = searchParams.get("pickup_time_to");
+    const searchQuery = searchParams.get("q");
     const limit = parseInt(searchParams.get("limit")) || 50;
     const offset = parseInt(searchParams.get("offset")) || 0;
 
@@ -36,6 +42,38 @@ export async function GET(request) {
     const whereClause = {};
     if (status) {
       whereClause.order_status = status;
+    }
+    if (paymentStatus) {
+      whereClause.payment_status = paymentStatus;
+    }
+    
+    // Filter tanggal pengambilan (range)
+    if (pickupDateFrom || pickupDateTo) {
+      whereClause.pickup_date = {};
+      if (pickupDateFrom) {
+        whereClause.pickup_date[sequelize.Sequelize.Op.gte] = pickupDateFrom;
+      }
+      if (pickupDateTo) {
+        whereClause.pickup_date[sequelize.Sequelize.Op.lte] = pickupDateTo;
+      }
+    }
+    
+    // Filter waktu pengambilan (range)
+    if (pickupTimeFrom || pickupTimeTo) {
+      whereClause.pickup_time = {};
+      if (pickupTimeFrom) {
+        whereClause.pickup_time[sequelize.Sequelize.Op.gte] = pickupTimeFrom;
+      }
+      if (pickupTimeTo) {
+        whereClause.pickup_time[sequelize.Sequelize.Op.lte] = pickupTimeTo;
+      }
+    }
+    
+    if (searchQuery) {
+      whereClause[sequelize.Sequelize.Op.or] = [
+        { customer_name: { [sequelize.Sequelize.Op.like]: `%${searchQuery}%` } },
+        { order_number: { [sequelize.Sequelize.Op.like]: `%${searchQuery}%` } }
+      ];
     }
 
     // Fetch orders dengan relasi
@@ -45,7 +83,7 @@ export async function GET(request) {
         {
           model: Bouquet,
           as: "bouquet",
-          attributes: ["id", "name", "price", "image_url"],
+          attributes: ["id", "name", "price", "image_url", "description"],
         },
         {
           model: OrderImage,
@@ -54,7 +92,7 @@ export async function GET(request) {
           order: [["display_order", "ASC"]],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["created_at", "ASC"]],
       limit,
       offset,
     });
@@ -181,6 +219,19 @@ export async function POST(request) {
       },
       { transaction }
     );
+(body.desired_bouquet_images && Array.isArray(body.desired_bouquet_images)); {
+      for (let i = 0; i < body.desired_bouquet_images.length; i++) {
+        await OrderImage.create(
+          {
+            order_id: order.id,
+            image_url: body.desired_bouquet_images[i],
+            image_type: "DESIRED_BOUQUET",
+            display_order: i + 1,
+          },
+          { transaction }
+        );
+      }
+    }
 
     // Simpan foto referensi (bisa lebih dari 1)
     if (body.reference_images && Array.isArray(body.reference_images)) {

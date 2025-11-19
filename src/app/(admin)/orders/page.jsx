@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,7 +9,6 @@ import FilterSelect from '@/components/ui/FilterSelect';
 import Pagination from '@/components/ui/Pagination';
 import { useToast } from '@/hooks/useToast';
 import { usePagination } from '@/hooks/usePagination';
-import Modal from '@/components/ui/Modal';
 // jsPDF and jspdf-autotable are loaded dynamically inside `exportToPDF`
 // to avoid build-time resolution errors and SSR issues.
 
@@ -19,19 +18,12 @@ export default function OrdersPage() {
   const showToast = useToast(); // Toast notifications
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [paymentFilter, setPaymentFilter] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [timeFrom, setTimeFrom] = useState('');
-  const [timeTo, setTimeTo] = useState('');
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  // Temporary modal-local state to avoid updating global filters while user is interacting
-  const [tempDateFrom, setTempDateFrom] = useState('');
-  const [tempDateTo, setTempDateTo] = useState('');
-  const [tempTimeFrom, setTempTimeFrom] = useState('');
-  const [tempTimeTo, setTempTimeTo] = useState('');
+  const [pickupDateFrom, setPickupDateFrom] = useState('');
+  const [pickupDateTo, setPickupDateTo] = useState('');
+  const [pickupTimeFrom, setPickupTimeFrom] = useState('');
+  const [pickupTimeTo, setPickupTimeTo] = useState('');
   const [page, setPage] = useState(1);
 
   // JWT Protection
@@ -42,17 +34,17 @@ export default function OrdersPage() {
   }, [user, authLoading, router]);
 
   // fetch orders with optional filters
-  const fetchOrders = async (opts = {}) => {
+  const fetchOrders = useCallback(async (opts = {}) => {
     try {
-      setLoading(true);
+      if (initialLoading) {
+        setLoading(true);
+      }
       const params = new URLSearchParams();
       if (searchQuery) params.append('q', searchQuery);
-      if (statusFilter) params.append('status', statusFilter);
-      if (paymentFilter) params.append('payment_status', paymentFilter);
-      if (dateFrom) params.append('date_from', dateFrom);
-      if (dateTo) params.append('date_to', dateTo);
-      if (timeFrom) params.append('time_from', timeFrom);
-      if (timeTo) params.append('time_to', timeTo);
+      if (pickupDateFrom) params.append('pickup_date_from', pickupDateFrom);
+      if (pickupDateTo) params.append('pickup_date_to', pickupDateTo);
+      if (pickupTimeFrom) params.append('pickup_time_from', pickupTimeFrom);
+      if (pickupTimeTo) params.append('pickup_time_to', pickupTimeTo);
       if (opts.page) params.append('page', String(opts.page));
 
       const res = await fetch(`/api/orders?${params.toString()}`);
@@ -62,13 +54,18 @@ export default function OrdersPage() {
       console.error('fetchOrders', err);
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
-  };
+  }, [searchQuery, pickupDateFrom, pickupDateTo, pickupTimeFrom, pickupTimeTo, initialLoading]);
 
   // call when relevant filters change (debounce as needed)
   useEffect(() => {
-    fetchOrders({ page });
-  }, [searchQuery, statusFilter, paymentFilter, dateFrom, dateTo, timeFrom, timeTo, page]);
+    const timeoutId = setTimeout(() => {
+      fetchOrders({ page });
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, pickupDateFrom, pickupDateTo, pickupTimeFrom, pickupTimeTo, page, fetchOrders]);
 
   const getStatusBadge = (status) => {
     const config = {
@@ -190,17 +187,17 @@ export default function OrdersPage() {
     }
   };
 
-  // Filter orders
-  const filteredOrders = orders.filter(order => {
-    const matchSearch = !searchQuery || 
-      order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.order_number?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchStatus = !statusFilter || order.order_status === statusFilter;
-    const matchPayment = !paymentFilter || order.payment_status === paymentFilter;
-    
-    return matchSearch && matchStatus && matchPayment;
-  });
+  // Filter orders - hanya untuk search di client-side
+  // Tanggal dan waktu sudah difilter di backend/API
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      const matchSearch = !searchQuery || 
+        order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.order_number?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      return matchSearch;
+    });
+  }, [orders, searchQuery]);
 
   // Pagination
   const {
@@ -214,22 +211,6 @@ export default function OrdersPage() {
     goToPage,
     changePerPage,
   } = usePagination(filteredOrders, 10); // 10 orders per page
-
-  const statusOptions = [
-    { value: '', label: 'Semua Status Pesanan' },
-    { value: 'WAITING_CONFIRMATION', label: 'Menunggu Konfirmasi' },
-    { value: 'PAYMENT_CONFIRMED', label: 'Terkonfirmasi' },
-    { value: 'IN_PROCESS', label: 'Dalam Proses' },
-    { value: 'READY_FOR_PICKUP', label: 'Siap Diambil' },
-    { value: 'COMPLETED', label: 'Selesai' },
-    { value: 'CANCELLED', label: 'Dibatalkan' },
-  ];
-
-  const paymentOptions = [
-    { value: '', label: 'Semua Status Pembayaran' },
-    { value: 'UNPAID', label: 'Belum Lunas' },
-    { value: 'PAID', label: 'Lunas' },
-  ];
 
   if (authLoading || loading) {
     return (
@@ -266,49 +247,87 @@ export default function OrdersPage() {
       </div>
 
       {/* Search and Filters */}
-      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row gap-3 items-start">
-        <div className="flex-1">
+      <div className="mb-4 sm:mb-6 space-y-3">
+        {/* Search Bar */}
+        <div className="w-full">
           <SearchBar 
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Cari nama pembeli..."
+            placeholder="Cari nama pembeli atau ID pesanan..."
           />
         </div>
-        <FilterSelect
-          value={statusFilter}
-          onChange={setStatusFilter}
-          options={statusOptions}
-        />
-        <FilterSelect
-          value={paymentFilter}
-          onChange={setPaymentFilter}
-          options={paymentOptions}
-        />
-
-        {/* Open modal for Date & Time filters */}
-        <div className="flex items-center">
-          <button
-            type="button"
-            onClick={() => {
-              // initialize modal-local temps from current filters
-              setTempDateFrom(dateFrom);
-              setTempDateTo(dateTo);
-              setTempTimeFrom(timeFrom);
-              setTempTimeTo(timeTo);
-              setIsFilterModalOpen(true);
-            }}
-            className="px-3 py-1 border rounded text-sm flex items-center gap-2 bg-white hover:bg-gray-50"
-          >
-            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3M3 11h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span>Filter Tanggal & Jam</span>
-          </button>
+        
+        {/* Filter Row */}
+        <div className="flex flex-wrap gap-2 sm:gap-3">
+          {/* Tanggal Pengambilan */}
+          <div className="flex items-center gap-2 flex-1 min-w-[300px]">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Tanggal Pengambilan</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={pickupDateFrom}
+                  onChange={(e) => setPickupDateFrom(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                />
+                <span className="text-gray-500 text-sm">—</span>
+                <input
+                  type="date"
+                  value={pickupDateTo}
+                  onChange={(e) => setPickupDateTo(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+          
+          {/* Waktu Pengambilan */}
+          <div className="flex items-center gap-2 flex-1 min-w-[250px]">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Waktu Pengambilan</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="time"
+                  value={pickupTimeFrom}
+                  onChange={(e) => setPickupTimeFrom(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                />
+                <span className="text-gray-500 text-sm">—</span>
+                <input
+                  type="time"
+                  value={pickupTimeTo}
+                  onChange={(e) => setPickupTimeTo(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+          
+          {/* Reset Filter Button */}
+          {(pickupDateFrom || pickupDateTo || pickupTimeFrom || pickupTimeTo || searchQuery) && (
+            <div className="flex items-end">
+              <button
+                onClick={() => {
+                  setPickupDateFrom('');
+                  setPickupDateTo('');
+                  setPickupTimeFrom('');
+                  setPickupTimeTo('');
+                  setSearchQuery('');
+                }}
+                className="px-3 sm:px-4 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors touch-target flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Reset
+              </button>
+            </div>
+          )}
         </div>
       </div>
       
       <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        {loading ? (
+        {initialLoading ? (
           <div className="p-8 sm:p-12 text-center">
             <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-primary mx-auto"></div>
             <p className="text-gray-500 mt-4 text-xs sm:text-sm">Memuat pesanan...</p>
@@ -417,7 +436,7 @@ export default function OrdersPage() {
         )}
         
         {/* Pagination */}
-        {!loading && filteredOrders.length > 0 && (
+        {!initialLoading && filteredOrders.length > 0 && (
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -430,114 +449,6 @@ export default function OrdersPage() {
           />
         )}
       </div>
-
-      {/* Date & Time Filter Modal */}
-      <Modal isOpen={isFilterModalOpen} onClose={() => setIsFilterModalOpen(false)} title="Filter Tanggal & Jam" size="md">
-        <div className="space-y-6">
-          <p className="text-sm text-gray-600">Pilih rentang tanggal dan jam untuk memfilter daftar pesanan. Kosongkan untuk menampilkan semua.</p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Dari Tanggal</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={tempDateFrom}
-                  onChange={(e) => setTempDateFrom(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400"
-                />
-                <svg className="w-5 h-5 text-gray-400 absolute right-3 top-2.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                </svg>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Sampai Tanggal</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={tempDateTo}
-                  onChange={(e) => setTempDateTo(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400"
-                />
-                <svg className="w-5 h-5 text-gray-400 absolute right-3 top-2.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Dari Jam</label>
-              <div className="relative">
-                <input
-                  type="time"
-                  value={tempTimeFrom}
-                  onChange={(e) => setTempTimeFrom(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400"
-                />
-                <svg className="w-5 h-5 text-gray-400 absolute right-3 top-2.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                </svg>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Sampai Jam</label>
-              <div className="relative">
-                <input
-                  type="time"
-                  value={tempTimeTo}
-                  onChange={(e) => setTempTimeTo(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400"
-                />
-                <svg className="w-5 h-5 text-gray-400 absolute right-3 top-2.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between gap-4">
-            <div className="text-sm text-gray-500">
-              {dateFrom || dateTo || timeFrom || timeTo ? (
-                <span>Aktif: {dateFrom || '-'} {dateFrom && dateTo ? `— ${dateTo}` : ''} {timeFrom || timeTo ? ` • ${timeFrom || '--:--'}—${timeTo || '--:--'}` : ''}</span>
-              ) : (
-                <span>Tidak ada filter aktif</span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  // reset both modal temps and global filters
-                  setTempDateFrom(''); setTempDateTo(''); setTempTimeFrom(''); setTempTimeTo('');
-                  setDateFrom(''); setDateTo(''); setTimeFrom(''); setTimeTo('');
-                  setPage(1); fetchOrders({ page: 1 });
-                  setIsFilterModalOpen(false);
-                }}
-                className="px-3 py-2 border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Reset
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  // apply modal temps to global filters
-                  setDateFrom(tempDateFrom);
-                  setDateTo(tempDateTo);
-                  setTimeFrom(tempTimeFrom);
-                  setTimeTo(tempTimeTo);
-                  setPage(1); fetchOrders({ page: 1 });
-                  setIsFilterModalOpen(false);
-                }}
-                className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-md text-sm shadow"
-              >
-                Terapkan
-              </button>
-            </div>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 }

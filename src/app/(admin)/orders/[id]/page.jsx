@@ -196,7 +196,21 @@ export default function OrderDetailPage({ params }) {
                 <p className="text-sm text-gray-500">Nama Pengirim / Rekening</p>
                 <p className="font-semibold">{order.sender_name || '-'}</p>
               </div>
-              <div className="col-span-2">
+              <div>
+                <p className="text-sm text-gray-500">Jenis Pembayaran</p>
+                <p className="font-semibold">
+                  {order.payment_type === 'DP' ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      DP (30%)
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Lunas
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div>
                 <p className="text-sm text-gray-500">Nomor WhatsApp</p>
                 <p className="font-semibold">{order.sender_phone || '-'}</p>
               </div>
@@ -207,10 +221,30 @@ export default function OrderDetailPage({ params }) {
           <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <h2 className="text-base sm:text-lg lg:text-xl font-bold mb-3 sm:mb-4">Detail Pesanan</h2>
             <div className="space-y-3 sm:space-y-4">
+              {/* Bouquet Info with Image */}
               <div>
-                <p className="text-xs sm:text-sm text-gray-500">Buket yang Dipesan</p>
-                <p className="font-semibold text-base sm:text-lg">{order.bouquet?.name || 'Custom'}</p>
-                <p className="text-primary font-bold text-lg sm:text-xl mt-1">{formatPrice(order.bouquet_price)}</p>
+                <p className="text-xs sm:text-sm text-gray-500 mb-2">Buket yang Dipesan</p>
+                <div className="flex gap-4">
+                  {order.bouquet?.image_url && (
+                    <div className="flex-shrink-0">
+                      <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden border-2 border-pink-200">
+                        <Image
+                          src={order.bouquet.image_url}
+                          alt={order.bouquet.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <p className="font-semibold text-base sm:text-lg">{order.bouquet?.name || 'Custom'}</p>
+                    <p className="text-primary font-bold text-lg sm:text-xl mt-1">{formatPrice(order.bouquet_price)}</p>
+                    {order.bouquet?.description && (
+                      <p className="text-sm text-gray-600 mt-2 line-clamp-2">{order.bouquet.description}</p>
+                    )}
+                  </div>
+                </div>
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">

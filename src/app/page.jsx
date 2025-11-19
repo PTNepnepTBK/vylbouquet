@@ -80,7 +80,7 @@ export default function Home() {
                   <HeartIcon className="w-5 h-5 md:w-6 md:h-6 text-rose-400" />
                 </div>
                 <span className="text-xs md:text-sm font-medium text-gray-800">
-                  Bouquet Bunga Premium
+                  Bouquet Artificial Flowers
                 </span>
               </div>
 
