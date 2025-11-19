@@ -179,8 +179,8 @@ export default function SettingsPage() {
             <div>
               <Input
                 label="Nama Pemilik Rekening BCA"
-                name="payment_bca_name"
-                value={settings.payment_bca_name}
+                name="payment_bca_desc"
+                value={settings.payment_bca_desc}
                 onChange={handleChange}
                 placeholder="Muhammad Nashirul Haq Resa"
               />
@@ -201,8 +201,8 @@ export default function SettingsPage() {
             <div>
               <Input
                 label="Nama Pemilik Rekening SeaBank"
-                name="payment_seabank_name"
-                value={settings.payment_seabank_name}
+                name="payment_seabank_desc"
+                value={settings.payment_seabank_desc}
                 onChange={handleChange}
                 placeholder="Muhammad Nashirul Haq Resa"
               />
@@ -223,8 +223,8 @@ export default function SettingsPage() {
             <div>
               <Input
                 label="Nama Pemilik ShopeePay"
-                name="payment_shopeepay_name"
-                value={settings.payment_shopeepay_name}
+                name="payment_shopeepay_desc"
+                value={settings.payment_shopeepay_desc}
                 onChange={handleChange}
                 placeholder="Muhammad Nashirul Haq Resa"
               />

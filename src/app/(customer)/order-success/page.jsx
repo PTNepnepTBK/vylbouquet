@@ -108,7 +108,14 @@ export default function OrderSuccessPage() {
 
   const total = order?.total_price || order?.bouquet?.price || order?.total || 0;
   const paid = order?.total_paid || order?.paid || 0;
-  const remaining = Math.max(0, total - paid);
+
+  // If payment method/channel indicates ShopeePay, apply +Rp 1.000 surcharge
+  const paymentMethodRaw = (order?.payment_method || order?.payment_method_name || order?.payment_channel || '')?.toString() || '';
+  const isShopee = /shopee/i.test(paymentMethodRaw);
+  const surcharge = isShopee ? 1000 : 0;
+
+  const displayTotal = Number(total) + surcharge;
+  const displayRemaining = Math.max(0, displayTotal - paid);
 
   // Build WhatsApp message to fixed number
   const whatsappNumber = '6289661175822';
@@ -122,9 +129,9 @@ export default function OrderSuccessPage() {
   const whatsappMessage = [
     `Nama pembeli: ${order?.customer_name || order?.name || '-'}`,
     `Produk yang dipesan: ${order?.bouquet_name || order?.bouquet?.name || '-'}`,
-    `Harga: ${formatPrice(total)}`,
+    `Harga: ${formatPrice(displayTotal)}`,
     `DP: ${formatPrice(paid)}`,
-    `Sisa pembayaran: ${formatPrice(remaining)}`,
+    `Sisa pembayaran: ${formatPrice(displayRemaining)}`,
     `Tanggal pengambilan: ${order?.pickup_date || order?.pickupDate || '-'}`,
     `Bukti transfer: ${proofText}`,
     `Catatan tambahan: ${notes}`
@@ -196,7 +203,7 @@ export default function OrderSuccessPage() {
               <div className="mt-4 bg-pink-50 border-t border-pink-100 rounded-b-md p-4">
                 <div className="flex justify-between text-sm text-gray-700 mb-1">
                   <span>Total Harga:</span>
-                  <span className="font-semibold">{formatPrice(total)}</span>
+                  <span className="font-semibold">{formatPrice(displayTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-green-600 mb-1">
                   <span>Dibayar:</span>
@@ -204,7 +211,7 @@ export default function OrderSuccessPage() {
                 </div>
                 <div className="flex justify-between text-sm text-rose-500">
                   <span>Sisa:</span>
-                  <span className="font-semibold">{formatPrice(remaining)}</span>
+                  <span className="font-semibold">{formatPrice(displayRemaining)}</span>
                 </div>
               </div>
             </section>

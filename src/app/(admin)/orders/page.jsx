@@ -21,6 +21,11 @@ export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [timeFrom, setTimeFrom] = useState('');
+  const [timeTo, setTimeTo] = useState('');
+  const [page, setPage] = useState(1);
 
   // JWT Protection
   useEffect(() => {
@@ -29,25 +34,34 @@ export default function OrdersPage() {
     }
   }, [user, authLoading, router]);
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  const fetchOrders = async () => {
-    setLoading(true);
+  // fetch orders with optional filters
+  const fetchOrders = async (opts = {}) => {
     try {
-      const response = await fetch('/api/orders');
-      const data = await response.json();
-      
-      if (data.success) {
-        setOrders(data.data);
-      }
-    } catch (error) {
-      console.error('Error:', error);
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('q', searchQuery);
+      if (statusFilter) params.append('status', statusFilter);
+      if (paymentFilter) params.append('payment_status', paymentFilter);
+      if (dateFrom) params.append('date_from', dateFrom);
+      if (dateTo) params.append('date_to', dateTo);
+      if (timeFrom) params.append('time_from', timeFrom);
+      if (timeTo) params.append('time_to', timeTo);
+      if (opts.page) params.append('page', String(opts.page));
+
+      const res = await fetch(`/api/orders?${params.toString()}`);
+      const json = await res.json();
+      setOrders(json.data || []);
+    } catch (err) {
+      console.error('fetchOrders', err);
     } finally {
       setLoading(false);
     }
   };
+
+  // call when relevant filters change (debounce as needed)
+  useEffect(() => {
+    fetchOrders({ page });
+  }, [searchQuery, statusFilter, paymentFilter, dateFrom, dateTo, timeFrom, timeTo, page]);
 
   const getStatusBadge = (status) => {
     const config = {
@@ -439,6 +453,65 @@ export default function OrdersPage() {
             onPerPageChange={changePerPage}
           />
         )}
+      </div>
+
+      {/* Date and Time Filters - new section */}
+      <div className="mt-4 sm:mt-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-500">Dari</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="px-2 py-1 border rounded text-sm"
+            />
+            <label className="sr-only">sampai</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="px-2 py-1 border rounded text-sm"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-500">Waktu</label>
+            <input
+              type="time"
+              value={timeFrom}
+              onChange={(e) => setTimeFrom(e.target.value)}
+              className="px-2 py-1 border rounded text-sm"
+            />
+            <span className="text-sm text-gray-400">—</span>
+            <input
+              type="time"
+              value={timeTo}
+              onChange={(e) => setTimeTo(e.target.value)}
+              className="px-2 py-1 border rounded text-sm"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => { setPage(1); fetchOrders({ page: 1 }); }}
+              className="px-3 py-1 bg-primary text-white rounded text-sm"
+            >
+              Terapkan
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDateFrom(''); setDateTo(''); setTimeFrom(''); setTimeTo('');
+                setPage(1); fetchOrders({ page: 1 });
+              }}
+              className="px-3 py-1 border rounded text-sm"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

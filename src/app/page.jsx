@@ -23,7 +23,7 @@ export default function Home() {
 
       {/* Hero Content - Responsive layout */}
       <div className="relative z-10 min-h-screen flex items-center font-serif">
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-20 md:py-24">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-8 py-20 md:py-24">
           
           {/* Text Content */}
           <div className="text-left max-w-3xl animate-slide-in-up">
@@ -39,7 +39,7 @@ export default function Home() {
 
             {/* Description - Responsive text */}
             <p className="mt-4 md:mt-6 text-base sm:text-lg md:text-xl text-gray-800 max-w-xl leading-relaxed">
-              Pesan buket bunga segar dengan mudah. Custom design, kualitas premium, dan pelayanan terbaik untuk setiap momen spesial Anda.
+              Pesan buket artificial flowers, bunga kering, dan pipe cleaner dengan mudah. Custom design, kualitas premium, dan pelayanan terbaik untuk setiap momen spesial Anda.
             </p>
 
             {/* CTA Buttons - Responsive layout */}
@@ -80,7 +80,7 @@ export default function Home() {
                   <HeartIcon className="w-5 h-5 md:w-6 md:h-6 text-rose-400" />
                 </div>
                 <span className="text-xs md:text-sm font-medium text-gray-800">
-                  Bunga Segar Premium
+                  Bouquet Bunga Premium
                 </span>
               </div>
 

@@ -27,6 +27,7 @@ export default function OrderPage() {
     card_message: "",
     additional_request: "",
     payment_type: "DP",
+    payment_channel: 'BCA',
     sender_name: "",
     sender_account_number: "",
     sender_phone: "",
@@ -150,8 +151,7 @@ export default function OrderPage() {
 
       const data = await response.json().catch(() => null);
       if (!data) throw new Error("Response tidak valid");
-      if (!data.success)
-        throw new Error(data.message || "Gagal membuat pesanan");
+      if (!data.success) throw new Error(data.message || "Gagal membuat pesanan");
 
       const saved = data.data || data;
       try {
@@ -162,9 +162,31 @@ export default function OrderPage() {
         console.warn("Could not save lastOrder", err);
       }
 
+      // Build WA message and open seller chat in new tab, then redirect to order-success
+      try {
+        const whatsappNumber = '6289661175822'; // fixed seller number
+        const proofs = Array.isArray(payUrls) && payUrls.length ? payUrls.join(', ') : (saved?.payment_proofs || '-') ;
+        const msgLines = [
+          `Nama pembeli: ${formData.customer_name || saved?.customer_name || '-'}`,
+          `Produk yang dipesan: ${selectedBouquet?.name || saved?.bouquet_name || saved?.bouquet?.name || '-'}`,
+          `Harga: ${formatPrice(payment.total)}`,
+          `DP: ${formatPrice(payment.dp)}`,
+          `Sisa pembayaran: ${formatPrice(payment.remaining)}`,
+          `Tanggal pengambilan: ${formData.pickup_date || saved?.pickup_date || '-'}`,
+          `Bukti transfer: ${proofs}`,
+          `Catatan tambahan: ${formData.additional_request || saved?.additional_request || saved?.note || '-'}`,
+        ];
+        const waUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(msgLines.join('\n'))}`;
+        // open WA in new tab/window
+        window.open(waUrl, '_blank');
+      } catch (err) {
+        console.warn('Could not open WhatsApp link', err);
+      }
+
       showToast.success(
         `Pesanan berhasil! Nomor Order: ${saved.order_number || saved.id || ""}`
       );
+      // navigate to order-success
       router.push("/order-success");
     } catch (error) {
       showToast.error(`Error: ${error?.message || error}`);
@@ -183,11 +205,14 @@ export default function OrderPage() {
 
   const payment = useMemo(() => {
     if (!selectedBouquet) return { dp: 0, remaining: 0, total: 0 };
-    const total = parseFloat(selectedBouquet.price) || 0;
+    const base = parseFloat(selectedBouquet.price) || 0;
+    // surcharge +Rp 1.000 for ShopeePay channel
+    const surcharge = (formData.payment_method === 'shopeepay' || formData.payment_channel === 'SHOPEEPAY') ? 1000 : 0;
+    const total = base + surcharge;
     const dp = formData.payment_type === "DP" ? total * 0.3 : total;
     const remaining = formData.payment_type === "DP" ? total - dp : 0;
     return { dp, remaining, total };
-  }, [selectedBouquet, formData.payment_type]);
+  }, [selectedBouquet, formData.payment_type, formData.payment_method, formData.payment_channel]);
 
   return (
     <>
