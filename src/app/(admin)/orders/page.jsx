@@ -9,6 +9,7 @@ import FilterSelect from '@/components/ui/FilterSelect';
 import Pagination from '@/components/ui/Pagination';
 import { useToast } from '@/hooks/useToast';
 import { usePagination } from '@/hooks/usePagination';
+import Modal from '@/components/ui/Modal';
 // jsPDF and jspdf-autotable are loaded dynamically inside `exportToPDF`
 // to avoid build-time resolution errors and SSR issues.
 
@@ -25,6 +26,12 @@ export default function OrdersPage() {
   const [dateTo, setDateTo] = useState('');
   const [timeFrom, setTimeFrom] = useState('');
   const [timeTo, setTimeTo] = useState('');
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  // Temporary modal-local state to avoid updating global filters while user is interacting
+  const [tempDateFrom, setTempDateFrom] = useState('');
+  const [tempDateTo, setTempDateTo] = useState('');
+  const [tempTimeFrom, setTempTimeFrom] = useState('');
+  const [tempTimeTo, setTempTimeTo] = useState('');
   const [page, setPage] = useState(1);
 
   // JWT Protection
@@ -125,11 +132,7 @@ export default function OrdersPage() {
     return labels[status] || status;
   };
 
-  const getPaymentStatusLabel = (status, remaining) => {
-    if (status === 'PAID' || remaining <= 0) return 'Lunas';
-    return 'Belum Lunas';
-  };
-
+  // Export visible orders to PDF (runtime dynamic import to avoid SSR issues)
   const exportToPDF = async () => {
     try {
       const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
@@ -138,100 +141,52 @@ export default function OrdersPage() {
       ]);
 
       const doc = new jsPDF();
-
-      // Add title
       doc.setFontSize(18);
-      doc.text('Laporan Pesanan Vyl Buket', 14, 15);
-      
-      // Add date
+      doc.text('Laporan Pesanan', 14, 15);
       doc.setFontSize(10);
-      const timestamp = new Date().toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      doc.text(`Tanggal Cetak: ${timestamp}`, 14, 22);
+      const ts = new Date().toLocaleString('id-ID');
+      doc.text(`Tanggal Cetak: ${ts}`, 14, 22);
 
-      // Prepare table data
-      const tableData = filteredOrders.map(order => {
-        const totalPrice = parseFloat(order.bouquet_price || 0);
+      const tableData = (filteredOrders || []).map((order) => {
+        const total = parseFloat(order.bouquet_price || 0);
+        const dp = parseFloat(order.dp_amount || 0);
         const remaining = parseFloat(order.remaining_amount || 0);
-        const dpAmount = parseFloat(order.dp_amount || 0);
-
         return [
-          `#${order.id}`,
+          order.order_number || (`#${order.id}`),
           order.customer_name || '',
           order.sender_phone || '',
           order.bouquet?.name || 'Custom',
-          formatPrice(totalPrice),
+          formatPrice(total),
           order.payment_type === 'DP' ? 'DP' : 'Lunas',
-          formatPrice(dpAmount),
-          formatPrice(remaining),
+          order.payment_type === 'DP' ? formatPrice(dp) : '-',
+          remaining > 0 ? formatPrice(remaining) : '-',
           getStatusLabel(order.order_status),
-          formatDate(order.pickup_date)
+          order.pickup_date ? formatDate(order.pickup_date) : '-'
         ];
       });
 
-      // Add table
       autoTable(doc, {
         startY: 28,
         head: [[
-          'ID',
-          'Pembeli',
-          'WhatsApp',
-          'Buket',
-          'Harga',
-          'Tipe',
-          'DP',
-          'Sisa',
-          'Status',
-          'Ambil'
+          'ID', 'Pembeli', 'WA', 'Buket', 'Harga', 'Tipe', 'DP', 'Sisa', 'Status', 'Ambil'
         ]],
         body: tableData,
         theme: 'striped',
-        styles: { 
-          fontSize: 8,
-          cellPadding: 2
-        },
-        headStyles: { 
-          fillColor: [139, 92, 246],
-          fontStyle: 'bold'
-        },
-        columnStyles: {
-          0: { cellWidth: 12 },
-          1: { cellWidth: 25 },
-          2: { cellWidth: 20 },
-          3: { cellWidth: 25 },
-          4: { cellWidth: 20 },
-          5: { cellWidth: 15 },
-          6: { cellWidth: 18 },
-          7: { cellWidth: 18 },
-          8: { cellWidth: 22 },
-          9: { cellWidth: 18 }
-        }
+        styles: { fontSize: 8, cellPadding: 2 },
       });
 
-      // Add footer
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFontSize(8);
-        doc.text(
-          `Halaman ${i} dari ${pageCount}`,
-          doc.internal.pageSize.width / 2,
-          doc.internal.pageSize.height - 10,
-          { align: 'center' }
-        );
+        doc.text(`Halaman ${i} dari ${pageCount}`, doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
       }
 
-      // Save PDF
-      const timestamp2 = new Date().toISOString().split('T')[0];
-      doc.save(`laporan-pesanan-${timestamp2}.pdf`);
+      const fileName = `laporan-pesanan-${new Date().toISOString().slice(0,10)}.pdf`;
+      doc.save(fileName);
     } catch (err) {
-      console.error('PDF export failed:', err);
-      showToast.error('Gagal mengekspor PDF. Pastikan dependency "jspdf" dan "jspdf-autotable" sudah terpasang.');
+      console.error('exportToPDF error', err);
+      showToast.error('Gagal mengekspor PDF. Pastikan dependency "jspdf" dan "jspdf-autotable" terpasang.');
     }
   };
 
@@ -311,7 +266,7 @@ export default function OrdersPage() {
       </div>
 
       {/* Search and Filters */}
-      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row gap-3">
+      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row gap-3 items-start">
         <div className="flex-1">
           <SearchBar 
             value={searchQuery}
@@ -329,6 +284,27 @@ export default function OrdersPage() {
           onChange={setPaymentFilter}
           options={paymentOptions}
         />
+
+        {/* Open modal for Date & Time filters */}
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() => {
+              // initialize modal-local temps from current filters
+              setTempDateFrom(dateFrom);
+              setTempDateTo(dateTo);
+              setTempTimeFrom(timeFrom);
+              setTempTimeTo(timeTo);
+              setIsFilterModalOpen(true);
+            }}
+            className="px-3 py-1 border rounded text-sm flex items-center gap-2 bg-white hover:bg-gray-50"
+          >
+            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3M3 11h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span>Filter Tanggal & Jam</span>
+          </button>
+        </div>
       </div>
       
       <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -455,64 +431,113 @@ export default function OrdersPage() {
         )}
       </div>
 
-      {/* Date and Time Filters - new section */}
-      <div className="mt-4 sm:mt-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-500">Dari</label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="px-2 py-1 border rounded text-sm"
-            />
-            <label className="sr-only">sampai</label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="px-2 py-1 border rounded text-sm"
-            />
+      {/* Date & Time Filter Modal */}
+      <Modal isOpen={isFilterModalOpen} onClose={() => setIsFilterModalOpen(false)} title="Filter Tanggal & Jam" size="md">
+        <div className="space-y-6">
+          <p className="text-sm text-gray-600">Pilih rentang tanggal dan jam untuk memfilter daftar pesanan. Kosongkan untuk menampilkan semua.</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Dari Tanggal</label>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={tempDateFrom}
+                  onChange={(e) => setTempDateFrom(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400"
+                />
+                <svg className="w-5 h-5 text-gray-400 absolute right-3 top-2.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                </svg>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Sampai Tanggal</label>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={tempDateTo}
+                  onChange={(e) => setTempDateTo(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400"
+                />
+                <svg className="w-5 h-5 text-gray-400 absolute right-3 top-2.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                </svg>
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-500">Waktu</label>
-            <input
-              type="time"
-              value={timeFrom}
-              onChange={(e) => setTimeFrom(e.target.value)}
-              className="px-2 py-1 border rounded text-sm"
-            />
-            <span className="text-sm text-gray-400">—</span>
-            <input
-              type="time"
-              value={timeTo}
-              onChange={(e) => setTimeTo(e.target.value)}
-              className="px-2 py-1 border rounded text-sm"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Dari Jam</label>
+              <div className="relative">
+                <input
+                  type="time"
+                  value={tempTimeFrom}
+                  onChange={(e) => setTempTimeFrom(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400"
+                />
+                <svg className="w-5 h-5 text-gray-400 absolute right-3 top-2.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                </svg>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Sampai Jam</label>
+              <div className="relative">
+                <input
+                  type="time"
+                  value={tempTimeTo}
+                  onChange={(e) => setTempTimeTo(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md shadow-sm focus:ring-2 focus:ring-pink-200 focus:border-pink-400"
+                />
+                <svg className="w-5 h-5 text-gray-400 absolute right-3 top-2.5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                </svg>
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => { setPage(1); fetchOrders({ page: 1 }); }}
-              className="px-3 py-1 bg-primary text-white rounded text-sm"
-            >
-              Terapkan
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setDateFrom(''); setDateTo(''); setTimeFrom(''); setTimeTo('');
-                setPage(1); fetchOrders({ page: 1 });
-              }}
-              className="px-3 py-1 border rounded text-sm"
-            >
-              Reset
-            </button>
+          <div className="flex items-center justify-between gap-4">
+            <div className="text-sm text-gray-500">
+              {dateFrom || dateTo || timeFrom || timeTo ? (
+                <span>Aktif: {dateFrom || '-'} {dateFrom && dateTo ? `— ${dateTo}` : ''} {timeFrom || timeTo ? ` • ${timeFrom || '--:--'}—${timeTo || '--:--'}` : ''}</span>
+              ) : (
+                <span>Tidak ada filter aktif</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  // reset both modal temps and global filters
+                  setTempDateFrom(''); setTempDateTo(''); setTempTimeFrom(''); setTempTimeTo('');
+                  setDateFrom(''); setDateTo(''); setTimeFrom(''); setTimeTo('');
+                  setPage(1); fetchOrders({ page: 1 });
+                  setIsFilterModalOpen(false);
+                }}
+                className="px-3 py-2 border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // apply modal temps to global filters
+                  setDateFrom(tempDateFrom);
+                  setDateTo(tempDateTo);
+                  setTimeFrom(tempTimeFrom);
+                  setTimeTo(tempTimeTo);
+                  setPage(1); fetchOrders({ page: 1 });
+                  setIsFilterModalOpen(false);
+                }}
+                className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-md text-sm shadow"
+              >
+                Terapkan
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </Modal>
     </div>
   );
 }
