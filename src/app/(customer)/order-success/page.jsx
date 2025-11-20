@@ -4,9 +4,9 @@ import Link from 'next/link';
 import NavBar from '../../../components/ui/NavBar';
 import Footer from '../../../components/ui/Footer';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 
-export default function OrderSuccessPage() {
+function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const orderIdParam = searchParams.get('order_id');
   const orderNumberParam = searchParams.get('order_number');
@@ -240,5 +240,17 @@ export default function OrderSuccessPage() {
       {/* Footer */}
       <Footer />
     </div>
+  );
+}
+
+export default function OrderSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500"></div>
+      </div>
+    }>
+      <OrderSuccessContent />
+    </Suspense>
   );
 }
