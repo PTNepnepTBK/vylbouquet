@@ -1,22 +1,36 @@
 import { NextResponse } from "next/server";
-import { authMiddleware } from "../../../middleware/authMiddleware";
+import { verifyAuth } from "../../../lib/auth";
+import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0; // Disable caching completely
 export const fetchCache = 'force-no-store';
 
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 // GET - Ambil semua settings
 export async function GET(request) {
   try {
-    // Load Setting model
-    const Setting = (await import("../../../models/Setting")).default;
+    // Get all settings using Supabase
+    const { data: settings, error } = await supabase
+      .from("settings")
+      .select("*");
 
-    // Get all settings
-    const settings = await Setting.findAll();
+    if (error) {
+      console.error("Get settings error:", error);
+      return NextResponse.json(
+        { success: false, message: "Failed to fetch settings" },
+        { status: 500 }
+      );
+    }
 
     // Convert to key-value object with description
     const settingsObj = {};
-    settings.forEach((setting) => {
+    (settings || []).forEach((setting) => {
       settingsObj[setting.key] = {
         value: setting.value,
         description: setting.description,
@@ -44,14 +58,20 @@ export async function GET(request) {
 }
 
 // PUT - Update settings
-export const PUT = authMiddleware(async function PUT(request) {
+export async function PUT(request) {
   try {
+    // Verify authentication
+    const authResult = verifyAuth(request);
+    if (!authResult.valid) {
+      return NextResponse.json(
+        { success: false, message: authResult.message },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
-    // Load Setting model
-    const Setting = (await import("../../../models/Setting")).default;
-
-    // Update or create each setting using upsert
+    // Update or create each setting using Supabase upsert
     const updatePromises = Object.entries(body).map(async ([key, data]) => {
       // Handle both object {value, description} and primitive value
       const value =
@@ -59,12 +79,17 @@ export const PUT = authMiddleware(async function PUT(request) {
       const description =
         typeof data === "object" && data !== null ? data.description : null;
 
-      // Use upsert method from Supabase Client implementation
-      return await Setting.upsert({
-        key,
-        value,
-        description,
-      });
+      // Use upsert with Supabase
+      return await supabase
+        .from("settings")
+        .upsert(
+          {
+            key,
+            value,
+            description,
+          },
+          { onConflict: "key" }
+        );
     });
 
     await Promise.all(updatePromises);
@@ -80,4 +105,4 @@ export const PUT = authMiddleware(async function PUT(request) {
       { status: 500 }
     );
   }
-});
+};

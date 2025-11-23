@@ -13,10 +13,15 @@ export async function sendWhatsAppMessage(phoneNumber, message) {
   };
 }
 
-export function formatOrderWhatsAppMessage(order, settings) {
-  // Format tanggal dalam bahasa Indonesia
+export function formatOrderWhatsAppMessage(order, settings = {}) {
+  if (!order) {
+    console.error('❌ Order is null or undefined');
+    return '';
+  }
+
+  // Format tanggal ringkas
   const pickupDate = new Date(order.pickup_date);
-  const dateOptions = { day: 'numeric', month: 'long', year: 'numeric' };
+  const dateOptions = { day: 'numeric', month: 'short', year: 'numeric' };
   const formattedDate = pickupDate.toLocaleDateString('id-ID', dateOptions);
   
   // Format harga
@@ -27,70 +32,45 @@ export function formatOrderWhatsAppMessage(order, settings) {
     }).format(price || 0);
   };
 
-  // Ambil payment methods dari settings atau gunakan default
-  const paymentMethods = settings?.payment_methods || [
-    { name: 'BCA', account_number: '4373021906', account_name: 'Vina Enjelia' },
-    { name: 'SeaBank', account_number: '901081198646', account_name: 'Vina Enjelia' },
-    { name: 'ShopeePay', account_number: '0882002048431', account_name: 'Vina Enjelia', note: '(TF SHOPEEPAY DARI BANK TAMBAH 1k untuk admin shopee)' }
-  ];
+  // Build payment methods from settings
+  const bcaNumber = settings?.bank_bca?.value || '4373021906';
+  const seabankNumber = settings?.bank_seabank?.value || '901081198646';
+  const shopeepayNumber = settings?.ewallet_shopeepay?.value || '0882002048431';
 
-  const paymentMethodsText = paymentMethods.map(pm => 
-    `${pm.name}: ${pm.account_number} (a.n ${pm.account_name}) ${pm.note || ''}`
-  ).join('\n');
+  // Get bouquet name
+  const bouquetName = order.bouquets?.name || order.bouquet?.name || 'Custom';
 
-  let message = `*═══ INVOICE ORDER VYL.BOUQUET ═══*\n\n`;
-  message += `📋 *DETAIL PESANAN*\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `📝 *No. Pesanan:* ${order.order_number}\n`;
-  message += `👤 *Nama:* ${order.customer_name}\n`;
-  message += `💐 *Buket:* ${order.bouquet?.name || 'Custom'}\n`;
-  message += `💰 *Harga Buket:* Rp ${formatPrice(order.bouquet_price)}\n`;
-  message += `📊 *Status:* Menunggu Konfirmasi Pembayaran\n\n`;
+  // VERSI RINGKAS - Fokus ke informasi penting saja
+  let message = `*INVOICE VYL.BOUQUET*\n\n`;
+  message += `No: ${order.order_number}\n`;
+  message += `Nama: ${order.customer_name}\n`;
+  message += `Buket: ${bouquetName}\n`;
+  message += `Harga: Rp ${formatPrice(order.bouquet_price)}\n\n`;
 
-  // Kartu ucapan
   if (order.card_message) {
-    message += `💌 *Kartu Ucapan FREE:*\n`;
-    message += `_"${order.card_message}"_\n\n`;
+    message += `Kartu: "${order.card_message}"\n\n`;
   }
 
-  message += `📅 *Tanggal Pengambilan:* ${formattedDate}\n`;
-  message += `⏰ *Jam Pengambilan:* ${order.pickup_time} WIB\n`;
-  message += `💳 *Metode Pembayaran:* ${order.payment_method}\n`;
-  message += `💸 *Jenis Pembayaran:* ${order.payment_type === 'DP' ? `DP 30% (Rp ${formatPrice(order.dp_amount)})` : `Lunas (Rp ${formatPrice(order.bouquet_price)})`}\n\n`;
+  message += `*AMBIL:*\n`;
+  message += `${formattedDate}, ${order.pickup_time}\n\n`;
 
-  // Request tambahan
-  if (order.additional_request) {
-    message += `📋 *REQUEST:*\n`;
-    message += `${order.additional_request}\n\n`;
-  }
+  message += `*BAYAR:* ${order.payment_type === 'DP' ? `DP Rp ${formatPrice(order.dp_amount)}` : `Lunas Rp ${formatPrice(order.bouquet_price)}`}\n`;
+  message += `Via ${order.payment_method}\n\n`;
 
-  message += `━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  message += `💳 *INFORMASI PEMBAYARAN*\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `${paymentMethodsText}\n\n`;
+  message += `*REKENING:*\n`;
+  message += `BCA: ${bcaNumber}\n`;
+  message += `SeaBank: ${seabankNumber}\n`;
+  message += `ShopeePay: ${shopeepayNumber}\n`;
+  message += `_(TF ShopeePay dari bank +1k)_\n\n`;
 
-  message += `━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  message += `📌 *CATATAN PENTING*\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `✅ Pembayaran di awal DP 30%\n`;
-  message += `✅ Pesanan di-keep setelah DP diterima\n\n`;
+  message += `*CATATAN:*\n`;
+  message += `- DP 30% dulu\n`;
+  message += `- Keep stlh DP masuk\n`;
+  message += `- Sen-Sab 08-18, Minggu 10-15\n\n`;
 
-  message += `🕐 *JAM OPERASIONAL PENGAMBILAN*\n`;
-  message += `• Senin - Sabtu: 08.00 - 18.00 WIB\n`;
-  message += `• Minggu: 10.00 - 15.00 WIB\n\n`;
+  message += `_Kirim bukti TF untuk konfirmasi_\n`;
+  message += `Terima kasih! 🌸`;
 
-  message += `⚠️ *Jika pesanan diambil oleh orang lain:*\n`;
-  message += `Tolong minta orang yang mengambil untuk mengirimkan:\n`;
-  message += `1. Format order ini\n`;
-  message += `2. Foto bunga yang dipesan\n\n`;
-
-  message += `⏱️ Jam pengambilan sesuai kesepakatan, tidak ada percepatan waktu.\n\n`;
-
-  message += `━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  message += `✨ *Terima kasih atas kepercayaan Anda!*\n`;
-  message += `Kami akan memproses pesanan Anda dengan sepenuh hati 💕\n\n`;
-  message += `Silakan kirimkan bukti transfer untuk konfirmasi pesanan Anda.\n`;
-  message += `Jika ada pertanyaan, jangan ragu untuk menghubungi kami! 🌸`;
-
+  console.log('✅ WhatsApp message formatted successfully');
   return message;
 }

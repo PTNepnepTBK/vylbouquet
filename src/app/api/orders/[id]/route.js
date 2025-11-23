@@ -1,58 +1,64 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { Order, Bouquet, OrderImage } from "@/models";
-import { verifyToken } from "@/lib/auth";
+import { verifyAuth } from "@/lib/auth";
+import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 export async function GET(request, { params }) {
   try {
-    // Verify token from cookies
-    const cookieStore = cookies();
-    const token = cookieStore.get("auth_token")?.value;
-
-    if (!token) {
+    // Verify authentication
+    const authResult = verifyAuth(request);
+    if (!authResult.valid) {
       return NextResponse.json(
-        { success: false, message: "Token tidak ditemukan" },
-        { status: 401 }
-      );
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json(
-        { success: false, message: "Token tidak valid" },
+        { success: false, message: authResult.message },
         { status: 401 }
       );
     }
 
     const { id } = params;
 
-    const order = await Order.findByPk(id, {
-      include: [
-        {
-          model: Bouquet,
-          as: "bouquet",
-          attributes: ["id", "name", "price", "image_url"],
-        },
-        {
-          model: OrderImage,
-          as: "images",
-          attributes: ["id", "image_url", "image_type"],
-        },
-      ],
-    });
+    // Get order with bouquet details
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .select(`
+        *,
+        bouquets (
+          id,
+          name,
+          price,
+          image_url
+        )
+      `)
+      .eq("id", id)
+      .single();
 
-    if (!order) {
+    if (orderError || !order) {
+      console.error("Get order error:", orderError);
       return NextResponse.json(
         { success: false, message: "Order not found" },
         { status: 404 }
       );
     }
 
+    // Get order images
+    const { data: images } = await supabase
+      .from("order_images")
+      .select("*")
+      .eq("order_id", id)
+      .order("display_order", { ascending: true });
+
     return NextResponse.json({
       success: true,
-      data: order,
+      data: {
+        ...order,
+        images: images || [],
+      },
     });
   } catch (error) {
     console.error("Get order error:", error);
@@ -65,21 +71,11 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
-    // Verify token from cookies
-    const cookieStore = cookies();
-    const token = cookieStore.get("auth_token")?.value;
-
-    if (!token) {
+    // Verify authentication
+    const authResult = verifyAuth(request);
+    if (!authResult.valid) {
       return NextResponse.json(
-        { success: false, message: "Token tidak ditemukan" },
-        { status: 401 }
-      );
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json(
-        { success: false, message: "Token tidak valid" },
+        { success: false, message: authResult.message },
         { status: 401 }
       );
     }
@@ -87,15 +83,19 @@ export async function PUT(request, { params }) {
     const { id } = params;
     const body = await request.json();
 
-    const order = await Order.findByPk(id);
-    if (!order) {
+    const { data: order, error } = await supabase
+      .from("orders")
+      .update({ ...body, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error || !order) {
       return NextResponse.json(
         { success: false, message: "Order not found" },
         { status: 404 }
       );
     }
-
-    await order.update(body);
 
     return NextResponse.json({
       success: true,

@@ -43,3 +43,37 @@ export async function comparePassword(password, hash) {
     return false;
   }
 }
+
+// Verify authentication from request (for API routes)
+export function verifyAuth(request) {
+  try {
+    // Get token from cookie header
+    const cookieHeader = request.headers.get("cookie");
+    if (!cookieHeader) {
+      return { valid: false, message: "Token tidak ditemukan" };
+    }
+
+    // Parse cookie to get auth_token
+    const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split("=");
+      acc[key] = value;
+      return acc;
+    }, {});
+
+    const token = cookies["auth_token"];
+    if (!token) {
+      return { valid: false, message: "Token tidak ditemukan" };
+    }
+
+    // Verify token
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return { valid: false, message: "Token tidak valid" };
+    }
+
+    return { valid: true, user: decoded };
+  } catch (error) {
+    console.error("Error verifying auth:", error);
+    return { valid: false, message: "Error verifying authentication" };
+  }
+}

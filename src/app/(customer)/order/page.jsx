@@ -17,7 +17,14 @@ function OrderPageContent() {
   const showToast = useToast(); // Toast notifications
 
   const [bouquets, setBouquets] = useState([]);
-  const [settings, setSettings] = useState(null);
+
+  const [settings, setSettings] = useState({
+    whatsapp_number: { value: "6289661175822" }, // ← Fallback default
+    payment_bca: { value: "", description: "" },
+    payment_seabank: { value: "", description: "" },
+    payment_shopeepay: { value: "", description: "" },
+  });
+
   const [selectedBouquet, setSelectedBouquet] = useState(null);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -141,7 +148,6 @@ function OrderPageContent() {
   };
 
   useEffect(() => {
-    // Load bouquets and settings in parallel for faster startup
     const loadInitial = async () => {
       try {
         const [bouqRes, setRes] = await Promise.all([
@@ -153,9 +159,22 @@ function OrderPageContent() {
 
         if (bouqJson && bouqJson.success)
           setBouquets(bouqJson.data.filter((b) => b.is_active));
-        if (setJson && setJson.success) setSettings(setJson.data || {});
+        
+        // ✅ FIX: Tambahkan fallback untuk settings
+        if (setJson && setJson.success && setJson.data) {
+          setSettings({
+            whatsapp_number: setJson.data.whatsapp_number || { value: "6289661175822" },
+            payment_bca: setJson.data.payment_bca || { value: "", description: "" },
+            payment_seabank: setJson.data.payment_seabank || { value: "", description: "" },
+            payment_shopeepay: setJson.data.payment_shopeepay || { value: "", description: "" },
+          });
+        } else {
+          // Jika fetch gagal, tetap pakai default state
+          console.warn("Settings not loaded, using default fallback");
+        }
       } catch (err) {
-        console.warn("Initial load failed", err);
+        console.error("Initial load failed", err);
+        showToast.error("Gagal memuat data. Menggunakan pengaturan default.");
       }
     };
 
@@ -313,24 +332,60 @@ function OrderPageContent() {
 
       // Build WA message and open seller chat in new tab, then redirect to order-success
       try {
-        // Get WhatsApp number from settings (format: 62xxxxxxxxx)
-        const whatsappNumber = settings?.whatsapp_number?.value || settings?.whatsapp_number || '6289661175822';
+        console.log('=== Building WhatsApp Message ===');
+        console.log('Settings object:', settings);
+        
+        // FIX: Multiple fallback untuk whatsappNumber
+        const whatsappNumber = 
+          settings?.whatsapp_number?.value || 
+          settings?.whatsapp_number || 
+          '62882002048431'; // Default fallback
+        
+        console.log('WhatsApp number extracted:', whatsappNumber);
+        
+        // Validasi format nomor (harus diawali 62)
+        const validWhatsappNumber = whatsappNumber.startsWith('62') 
+          ? whatsappNumber 
+          : '62882002048431';
+        
+        console.log('Valid WhatsApp number:', validWhatsappNumber);
         
         // Format message menggunakan fungsi dari whatsapp.js
         const formattedMessage = formatOrderWhatsAppMessage(saved, settings);
         
-        const waUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(formattedMessage)}`;
-        // open WA in new tab/window
-        window.open(waUrl, '_blank');
+        console.log('=== WhatsApp Message Generated ===');
+        console.log('Message length:', formattedMessage.length);
+        console.log('Full message:\n', formattedMessage);
+        
+        const waUrl = `https://wa.me/${validWhatsappNumber}?text=${encodeURIComponent(formattedMessage)}`;
+        
+        console.log('WhatsApp URL length:', waUrl.length);
+        console.log('Opening WhatsApp...');
+        
+        // Open WA in new tab/window
+        const opened = window.open(waUrl, '_blank');
+        
+        if (!opened) {
+          console.error('Failed to open WhatsApp - popup blocked?');
+          showToast.warning('Popup diblokir! Silakan izinkan popup atau klik tombol WhatsApp di halaman berikutnya.');
+        } else {
+          console.log('✅ WhatsApp opened successfully');
+        }
+        
+        console.log('WhatsApp redirect:', validWhatsappNumber);
       } catch (err) {
-        console.warn('Could not open WhatsApp link', err);
+        console.error('Could not open WhatsApp link', err);
+        showToast.warning('Pesanan berhasil dibuat, tapi gagal membuka WhatsApp. Silakan hubungi admin manual.');
       }
 
       showToast.success(
         `Pesanan berhasil! Nomor Order: ${saved.order_number || saved.id || ""}`
       );
-      // navigate to order-success
-      router.push("/order-success");
+      
+      // Delay redirect to allow WhatsApp to open
+      setTimeout(() => {
+        router.push("/order-success");
+      }, 500);
     } catch (error) {
       showToast.error(`Error: ${error?.message || error}`);
     } finally {

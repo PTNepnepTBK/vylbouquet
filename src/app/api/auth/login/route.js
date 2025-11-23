@@ -1,18 +1,14 @@
 import { NextResponse } from "next/server";
 import { comparePassword, generateToken } from "../../../../lib/auth";
+import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
-// Helper to load Admin model safely with clearer errors
-async function getAdminModel() {
-  try {
-    const module = await import("../../../../models/Admin");
-    return module.default || module.Admin || module;
-  } catch (err) {
-    console.error("Failed loading Admin model:", err);
-    throw new Error("MODEL_LOAD_FAILED");
-  }
-}
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 export async function POST(request) {
   try {
@@ -27,13 +23,16 @@ export async function POST(request) {
       );
     }
 
-    // Pastikan koneksi database siap (optional lightweight ping)
-    // NOTE: We avoid a full sync here for performance; ensure migrations ran.
+    // Find admin using Supabase
+    const { data: admin, error } = await supabase
+      .from("admins")
+      .select("*")
+      .eq("username", username)
+      .eq("is_active", true)
+      .single();
 
-    const Admin = await getAdminModel();
-    const admin = await Admin.findOne({ where: { username, is_active: true } });
-
-    if (!admin) {
+    if (error || !admin) {
+      console.error("Admin fetch error:", error);
       return NextResponse.json(
         { success: false, message: "Username atau password salah" },
         { status: 401 }

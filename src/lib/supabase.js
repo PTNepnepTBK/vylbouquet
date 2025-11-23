@@ -5,7 +5,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('Missing Supabase credentials in environment variables');
+  console.warn('⚠️ Missing Supabase credentials in environment variables');
 }
 
 // Create Supabase client with service role for server-side operations
@@ -33,4 +33,7 @@ const testConnection = async () => {
 
 testConnection();
 
+// Export both default and named export for compatibility
 module.exports = supabase;
+module.exports.default = supabase;
+module.exports.supabase = supabase;

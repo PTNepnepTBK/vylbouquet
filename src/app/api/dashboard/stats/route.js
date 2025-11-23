@@ -1,47 +1,51 @@
 import { NextResponse } from "next/server";
-import Order from "../../../../models/Order";
+import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 export async function GET(request) {
   try {
-    // Get statistics for each status
-    const [waiting, confirmed, inProcess, ready, completed] = await Promise.all(
+    // Get statistics for each status using Supabase
+    const [waitingResult, confirmedResult, inProcessResult, readyResult, completedResult] = await Promise.all(
       [
-        Order.count({ where: { order_status: "WAITING_CONFIRMATION" } }),
-        Order.count({ where: { order_status: "PAYMENT_CONFIRMED" } }),
-        Order.count({ where: { order_status: "IN_PROCESS" } }),
-        Order.count({ where: { order_status: "READY_FOR_PICKUP" } }),
-        Order.count({ where: { order_status: "COMPLETED" } }),
+        supabase.from("orders").select("*", { count: "exact", head: true }).eq("order_status", "WAITING_CONFIRMATION"),
+        supabase.from("orders").select("*", { count: "exact", head: true }).eq("order_status", "PAYMENT_CONFIRMED"),
+        supabase.from("orders").select("*", { count: "exact", head: true }).eq("order_status", "IN_PROCESS"),
+        supabase.from("orders").select("*", { count: "exact", head: true }).eq("order_status", "READY_FOR_PICKUP"),
+        supabase.from("orders").select("*", { count: "exact", head: true }).eq("order_status", "COMPLETED"),
       ]
     );
 
     // Get recent orders (last 10)
-    const recentOrders = await Order.findAll({
-      limit: 10,
-      order: [["created_at", "DESC"]],
-      attributes: [
-        "id",
-        "customer_name",
-        "pickup_date",
-        "order_status",
-        "payment_status",
-      ],
-    });
+    const { data: recentOrders, error: ordersError } = await supabase
+      .from("orders")
+      .select("id, customer_name, pickup_date, order_status, payment_status")
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (ordersError) {
+      console.error("Get recent orders error:", ordersError);
+    }
 
     const stats = {
-      waiting,
-      confirmed,
-      inProcess,
-      ready,
-      completed,
+      waiting: waitingResult.count || 0,
+      confirmed: confirmedResult.count || 0,
+      inProcess: inProcessResult.count || 0,
+      ready: readyResult.count || 0,
+      completed: completedResult.count || 0,
     };
 
     return NextResponse.json({
       success: true,
       data: {
         stats,
-        recentOrders,
+        recentOrders: recentOrders || [],
       },
     });
   } catch (error) {

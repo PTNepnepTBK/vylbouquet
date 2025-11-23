@@ -150,7 +150,8 @@ export default function BouquetsPage() {
         fetchStats();
         fetchBouquets();
       } else {
-        throw new Error(data.message);
+        // Show user-friendly error message without throwing
+        showToast.error(data.message || 'Gagal menghapus buket');
       }
     } catch (error) {
       console.error('Delete error:', error);
@@ -287,12 +288,13 @@ export default function BouquetsPage() {
               className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden"
             >
               {/* Image */}
-              <div className="relative h-40 sm:h-48 bg-gray-100">
+              <div className="relative h-48 sm:h-56 lg:h-64 bg-gray-100">
                 {bouquet.image_url ? (
                   <Image
                     src={bouquet.image_url}
                     alt={bouquet.name}
                     fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     className="object-cover"
                   />
                 ) : (
@@ -311,31 +313,31 @@ export default function BouquetsPage() {
               </div>
 
               {/* Content */}
-              <div className="p-3 sm:p-5">
-                <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1 sm:mb-2 line-clamp-1">{bouquet.name}</h3>
-                <p className="text-lg sm:text-xl font-bold text-primary mb-2 sm:mb-3">{formatPrice(bouquet.price)}</p>
+              <div className="p-4 sm:p-5">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 line-clamp-1">{bouquet.name}</h3>
+                <p className="text-xl sm:text-2xl font-bold text-primary mb-3">{formatPrice(bouquet.price)}</p>
                 
                 {bouquet.description && (
-                  <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 line-clamp-2">
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">
                     {bouquet.description}
                   </p>
                 )}
 
                 {/* Actions */}
-                <div className="flex gap-2 mt-3 sm:mt-4">
+                <div className="flex gap-2 sm:gap-3">
                   <button
                     onClick={() => handleEdit(bouquet)}
-                    className="flex-1 bg-blue-50 text-blue-600 py-2 px-2 sm:px-3 rounded-lg hover:bg-blue-100 active:bg-blue-200 transition-colors font-medium text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-1.5 touch-target"
+                    className="flex-1 bg-blue-50 text-blue-600 py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg hover:bg-blue-100 active:bg-blue-200 transition-colors font-medium text-sm sm:text-base flex items-center justify-center gap-2 touch-target"
                   >
-                    <PencilIcon className="w-4 h-4" />
-                    <span className="hidden sm:inline">Edit</span>
+                    <PencilIcon className="w-5 h-5" />
+                    <span>Edit</span>
                   </button>
                   <button
                     onClick={() => handleDelete(bouquet.id, bouquet.name, bouquet.image_url)}
-                    className="flex-1 bg-red-50 text-red-600 py-2 px-2 sm:px-3 rounded-lg hover:bg-red-100 active:bg-red-200 transition-colors font-medium text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-1.5 touch-target"
+                    className="flex-1 bg-red-50 text-red-600 py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg hover:bg-red-100 active:bg-red-200 transition-colors font-medium text-sm sm:text-base flex items-center justify-center gap-2 touch-target"
                   >
-                    <TrashIcon className="w-4 h-4" />
-                    <span className="hidden sm:inline">Hapus</span>
+                    <TrashIcon className="w-5 h-5" />
+                    <span>Hapus</span>
                   </button>
                 </div>
               </div>

@@ -1,90 +1,88 @@
 import { NextResponse } from "next/server";
-import { Order, Bouquet, OrderImage } from "@/models";
-import { verifyToken } from "@/lib/auth";
-import { cookies } from "next/headers";
+import { verifyAuth } from "@/lib/auth";
+import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 // GET - Read all orders (Protected dengan JWT)
 export async function GET(request) {
   try {
-    // Cek JWT token dari cookie
-    const cookieStore = cookies();
-    const token = cookieStore.get("auth_token")?.value;
-
-    if (!token) {
+    // Verify authentication
+    const authResult = verifyAuth(request);
+    if (!authResult.valid) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized - Token required" },
-        { status: 401 }
-      );
-    }
-
-    const decoded = verifyToken(token);
-
-    if (!decoded) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized - Invalid token" },
+        { success: false, message: authResult.message },
         { status: 401 }
       );
     }
 
     // Get query parameters untuk filter
     const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page")) || 1;
+    const limit = parseInt(searchParams.get("limit")) || 50;
     const status = searchParams.get("status");
     const paymentStatus = searchParams.get("payment_status");
-    const pickupDateFrom = searchParams.get("pickup_date_from");
-    const pickupDateTo = searchParams.get("pickup_date_to");
-    const pickupTimeFrom = searchParams.get("pickup_time_from");
-    const pickupTimeTo = searchParams.get("pickup_time_to");
     const searchQuery = searchParams.get("q");
-    const limit = parseInt(searchParams.get("limit")) || 50;
-    const offset = parseInt(searchParams.get("offset")) || 0;
 
-    // Build where clause
-    const whereClause = {};
-    if (status) {
-      whereClause.order_status = status;
+    const offset = (page - 1) * limit;
+
+    // Build query
+    let query = supabase
+      .from("orders")
+      .select(`
+        *,
+        bouquets (
+          id,
+          name,
+          price,
+          image_url
+        )
+      `, { count: "exact" });
+
+    // Apply filters
+    if (status && status !== "ALL") {
+      // Try both column names for compatibility
+      query = query.or(`order_status.eq.${status},status.eq.${status}`);
     }
-    if (paymentStatus) {
-      whereClause.payment_status = paymentStatus;
+
+    if (paymentStatus && paymentStatus !== "ALL") {
+      // Try both column names for compatibility
+      query = query.or(`payment_status.eq.${paymentStatus},payment_channel.eq.${paymentStatus}`);
     }
-    // Note: Range filters for pickup_date/time removed (Supabase Client needs custom query)
-    // TODO: Implement range filters if needed
 
-    // Fetch orders dengan relasi
-    const orders = await Order.findAll({
-      where: whereClause,
-      include: [
-        { model: 'Bouquet' },
-        { model: 'OrderImage' }
-      ],
-      order: [["created_at", "ASC"]],
-    });
-
-    // Apply search filter in memory (simple approach)
-    let filteredOrders = orders;
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filteredOrders = orders.filter(order => 
-        order.customer_name?.toLowerCase().includes(query) ||
-        order.order_number?.toLowerCase().includes(query)
+      query = query.or(`customer_name.ilike.%${searchQuery}%,order_number.ilike.%${searchQuery}%`);
+    }
+
+    // Apply pagination and ordering
+    const { data: orders, error, count } = await query
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error("Get orders error:", error);
+      return NextResponse.json(
+        { success: false, message: "Gagal mengambil data orders", error: error.message },
+        { status: 500 }
       );
     }
 
-    // Apply pagination in memory
-    const total = filteredOrders.length;
-    const paginatedOrders = filteredOrders.slice(offset, offset + limit);
-
     return NextResponse.json({
       success: true,
-      data: paginatedOrders,
+      data: orders || [],
       pagination: {
-        total,
+        page,
         limit,
-        offset,
-        hasMore: offset + limit < total,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
       },
     });
   } catch (error) {
@@ -192,9 +190,15 @@ export async function POST(request) {
       }
     }
 
-    // Cek bouquet exists
-    const bouquet = await Bouquet.findByPk(body.bouquet_id);
-    if (!bouquet) {
+    // Cek bouquet exists using Supabase
+    const { data: bouquet, error: bouquetError } = await supabase
+      .from("bouquets")
+      .select("*")
+      .eq("id", body.bouquet_id)
+      .single();
+
+    if (bouquetError || !bouquet) {
+      console.error("Bouquet fetch error:", bouquetError);
       return NextResponse.json(
         { success: false, message: "Bouquet not found" },
         { status: 404 }
@@ -211,14 +215,20 @@ export async function POST(request) {
     // Generate order number (format: ORD-YYYYMMDD-XXXX)
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
-    // Count orders today (simple count without date filter)
-    const allOrders = await Order.findAll({});
-    const todayOrders = allOrders.filter(o => {
-      const orderDate = new Date(o.created_at).toISOString().slice(0, 10);
-      return orderDate === now.toISOString().slice(0, 10);
-    });
-    const count = todayOrders.length;
-    const orderNumber = `ORD-${dateStr}-${String(count + 1).padStart(4, "0")}`;
+    
+    // Count orders today using Supabase
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const { count: todayOrderCount } = await supabase
+      .from("orders")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", todayStart.toISOString())
+      .lte("created_at", todayEnd.toISOString());
+
+    const orderNumber = `ORD-${dateStr}-${String((todayOrderCount || 0) + 1).padStart(4, "0")}`;
 
     // Hitung payment
     const bouquetPrice = parseFloat(bouquet.price);
@@ -238,75 +248,134 @@ export async function POST(request) {
       totalPaid = 0; // Belum bayar, menunggu konfirmasi
     }
 
-    // Create order
-    const order = await Order.create({
-      order_number: orderNumber,
-      bouquet_id: body.bouquet_id,
-      customer_name: body.customer_name,
-      sender_name: body.sender_name,
-      sender_account_number: body.sender_account_number || null,
-      sender_phone: body.sender_phone || null,
-      bouquet_price: bouquetPrice,
-      payment_type: body.payment_type,
-      payment_method: body.payment_method,
-      dp_amount: dpAmount,
-      remaining_amount: remainingAmount,
-      total_paid: totalPaid,
-      pickup_date: body.pickup_date,
-      pickup_time: body.pickup_time,
-      additional_request: body.additional_request || null,
-      card_message: body.card_message || null,
-      order_status: "WAITING_CONFIRMATION",
-      payment_status: paymentStatus,
-      whatsapp_sent: false,
-    });
+    // Create order using Supabase
+    const { data: order, error: createError } = await supabase
+      .from("orders")
+      .insert({
+        order_number: orderNumber,
+        bouquet_id: body.bouquet_id,
+        customer_name: body.customer_name,
+        sender_name: body.sender_name,
+        sender_account_number: body.sender_account_number || null,
+        sender_phone: body.sender_phone || null,
+        bouquet_price: bouquetPrice,
+        payment_type: body.payment_type,
+        payment_method: body.payment_method,
+        dp_amount: dpAmount,
+        remaining_amount: remainingAmount,
+        total_paid: totalPaid,
+        pickup_date: body.pickup_date,
+        pickup_time: body.pickup_time,
+        additional_request: body.additional_request || null,
+        card_message: body.card_message || null,
+        order_status: "WAITING_CONFIRMATION",
+        payment_status: paymentStatus,
+        whatsapp_sent: false,
+        created_at: now.toISOString(),
+        updated_at: now.toISOString(),
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      console.error("Create order error:", createError);
+      return NextResponse.json(
+        { success: false, message: "Failed to create order", error: createError.message },
+        { status: 500 }
+      );
+    }
 
     // Simpan foto desired bouquet (bisa lebih dari 1)
     if (
       body.desired_bouquet_images &&
-      Array.isArray(body.desired_bouquet_images)
+      Array.isArray(body.desired_bouquet_images) &&
+      body.desired_bouquet_images.length > 0
     ) {
-      for (let i = 0; i < body.desired_bouquet_images.length; i++) {
-        await OrderImage.create({
-          order_id: order.id,
-          image_url: body.desired_bouquet_images[i],
-          image_type: "DESIRED_BOUQUET",
-          display_order: i + 1,
-        });
+      const imagesToInsert = body.desired_bouquet_images.map((imageUrl, index) => ({
+        order_id: order.id,
+        image_url: imageUrl,
+        image_type: "DESIRED_BOUQUET",
+        display_order: index + 1,
+      }));
+
+      const { error: imageError } = await supabase
+        .from("order_images")
+        .insert(imagesToInsert);
+
+      if (imageError) {
+        console.warn("Failed to insert desired bouquet images:", imageError);
       }
     }
 
     // Simpan foto referensi (bisa lebih dari 1)
-    if (body.reference_images && Array.isArray(body.reference_images)) {
-      for (let i = 0; i < body.reference_images.length; i++) {
-        await OrderImage.create({
-          order_id: order.id,
-          image_url: body.reference_images[i],
-          image_type: "REFERENCE",
-          display_order: i + 1,
-        });
+    if (body.reference_images && Array.isArray(body.reference_images) && body.reference_images.length > 0) {
+      const imagesToInsert = body.reference_images.map((imageUrl, index) => ({
+        order_id: order.id,
+        image_url: imageUrl,
+        image_type: "REFERENCE",
+        display_order: index + 1,
+      }));
+
+      const { error: imageError } = await supabase
+        .from("order_images")
+        .insert(imagesToInsert);
+
+      if (imageError) {
+        console.warn("Failed to insert reference images:", imageError);
       }
     }
 
     // Simpan bukti transfer (bisa lebih dari 1)
-    if (body.payment_proofs && Array.isArray(body.payment_proofs)) {
-      for (let i = 0; i < body.payment_proofs.length; i++) {
-        await OrderImage.create({
-          order_id: order.id,
-          image_url: body.payment_proofs[i],
-          image_type: "PAYMENT_PROOF",
-          display_order: i + 1,
-        });
+    if (body.payment_proofs && Array.isArray(body.payment_proofs) && body.payment_proofs.length > 0) {
+      const imagesToInsert = body.payment_proofs.map((imageUrl, index) => ({
+        order_id: order.id,
+        image_url: imageUrl,
+        image_type: "PAYMENT_PROOF",
+        display_order: index + 1,
+      }));
+
+      const { error: imageError } = await supabase
+        .from("order_images")
+        .insert(imagesToInsert);
+
+      if (imageError) {
+        console.warn("Failed to insert payment proof images:", imageError);
       }
     }
 
     // Fetch order lengkap dengan relasi
-    const createdOrder = await Order.findByPk(order.id, {
-      include: [
-        { model: 'Bouquet' },
-        { model: 'OrderImage' }
-      ],
-    });
+    const { data: createdOrder, error: fetchError } = await supabase
+      .from("orders")
+      .select(`
+        *,
+        bouquets (
+          id,
+          name,
+          price,
+          image_url
+        ),
+        order_images:order_images (
+          id,
+          image_url,
+          image_type,
+          display_order
+        )
+      `)
+      .eq("id", order.id)
+      .single();
+
+    if (fetchError) {
+      console.warn("Failed to fetch created order with relations:", fetchError);
+      // Still return success since order was created
+      return NextResponse.json(
+        {
+          success: true,
+          message: "Order created successfully",
+          data: order,
+        },
+        { status: 201 }
+      );
+    }
 
     return NextResponse.json(
       {

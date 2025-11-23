@@ -45,7 +45,8 @@ export default function OrderDetailPage({ params }) {
       const data = await response.json();
       
       if (data.success) {
-        setOrder(data.data);
+        // Force new object reference untuk trigger React re-render
+        setOrder({ ...data.data });
       } else {
         showToast.error('Error: ' + data.message);
       }
@@ -72,7 +73,8 @@ export default function OrderDetailPage({ params }) {
       const data = await response.json();
       if (data.success) {
         showToast.success('Status berhasil diupdate!');
-        fetchOrderDetail();
+        // Use response data directly to avoid race condition
+        setOrder({ ...data.data, bouquet: order.bouquet, images: order.images });
       } else {
         showToast.error('Error: ' + data.message);
       }
@@ -99,7 +101,8 @@ export default function OrderDetailPage({ params }) {
       const data = await response.json();
       if (data.success) {
         showToast.success('Pembayaran ditandai lunas!');
-        fetchOrderDetail();
+        // Use response data directly to avoid race condition
+        setOrder({ ...data.data, bouquet: order.bouquet, images: order.images });
       } else {
         showToast.error('Error: ' + data.message);
       }
