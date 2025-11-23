@@ -111,8 +111,6 @@ function OrderSuccessContent() {
   const paid = order?.total_paid || order?.paid || 0;
   const remaining = Math.max(0, total - paid);
 
-  // Generate WhatsApp URL using current order data with proper format
-  const whatsappNumber = '6282180881698';
   let whatsappUrl = '';
   
   if (order) {

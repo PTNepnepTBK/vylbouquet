@@ -146,7 +146,7 @@ function OrderPageContent() {
       try {
         const [bouqRes, setRes] = await Promise.all([
           fetch("/api/bouquets"),
-          fetch("/api/settings"),
+          fetch(`/api/settings?t=${Date.now()}`, { cache: 'no-store' }),
         ]);
         const bouqJson = await bouqRes.json().catch(() => null);
         const setJson = await setRes.json().catch(() => null);

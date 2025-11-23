@@ -4,16 +4,13 @@ const { Sequelize } = require("sequelize");
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error('DATABASE_URL is not defined in environment variables. Please add it to .env.local');
+  throw new Error('DATABASE_URL is not defined in environment variables');
 }
 
 const sequelize = new Sequelize(connectionString, {
   dialect: "postgres",
   dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false
-    }
+    ssl: false, // Supabase pooler (port 6543) doesn't need SSL
   },
   logging: false,
   pool: {
@@ -31,8 +28,8 @@ const testConnection = async () => {
     console.log("✅ Database connected successfully (Supabase PostgreSQL)");
   } catch (error) {
     console.error("❌ Unable to connect to database:", error.message);
-    console.error("   Check your DATABASE_URL in .env.local");
-    console.error("   Get connection string from: Supabase Dashboard > Settings > Database");
+    console.error("   Check your DATABASE_URL environment variable");
+    console.error("   Expected format: postgresql://postgres:PASSWORD@db.PROJECT.supabase.co:5432/postgres");
   }
 };
 

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { authMiddleware } from "../../../middleware/authMiddleware";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0; // Disable caching completely
+export const fetchCache = 'force-no-store';
 
 // GET - Ambil semua settings
 export async function GET(request) {
@@ -21,10 +23,17 @@ export async function GET(request) {
       };
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: settingsObj,
     });
+
+    // Add cache control headers to prevent caching
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+
+    return response;
   } catch (error) {
     console.error("Get settings error:", error);
     return NextResponse.json(
@@ -42,7 +51,7 @@ export const PUT = authMiddleware(async function PUT(request) {
     // Load Setting model
     const Setting = (await import("../../../models/Setting")).default;
 
-    // Update or create each setting
+    // Update or create each setting using upsert
     const updatePromises = Object.entries(body).map(async ([key, data]) => {
       // Handle both object {value, description} and primitive value
       const value =
@@ -50,18 +59,12 @@ export const PUT = authMiddleware(async function PUT(request) {
       const description =
         typeof data === "object" && data !== null ? data.description : null;
 
-      const [setting, created] = await Setting.findOrCreate({
-        where: { key },
-        defaults: { key, value, description },
+      // Use upsert method from Supabase Client implementation
+      return await Setting.upsert({
+        key,
+        value,
+        description,
       });
-
-      if (!created) {
-        setting.value = value;
-        setting.description = description;
-        await setting.save();
-      }
-
-      return setting;
     });
 
     await Promise.all(updatePromises);

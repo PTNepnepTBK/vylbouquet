@@ -29,8 +29,10 @@ export default function SettingsPage() {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/settings', {
+      // Add timestamp to prevent caching
+      const response = await fetch(`/api/settings?t=${Date.now()}`, {
         credentials: 'include', // Sertakan cookies untuk autentikasi
+        cache: 'no-store', // Force no cache
       });
       
       if (response.status === 401) {
@@ -176,6 +178,8 @@ export default function SettingsPage() {
 
       if (data.success) {
         showToast.success('Pengaturan berhasil disimpan');
+        // Refresh settings data immediately
+        await fetchSettings();
       } else {
         throw new Error(data.message);
       }
