@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { uploadFile, deleteFile } from "@/lib/supabaseStorage";
 
 export async function POST(request) {
   try {
@@ -14,52 +13,94 @@ export async function POST(request) {
       );
     }
 
-    // Validasi tipe file
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
+    // Validasi tipe file gambar
+    if (!file.type.startsWith('image/')) {
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid file type. Only JPG, PNG, WEBP allowed",
+          message: "Invalid file type. Only images allowed",
         },
         { status: 400 }
       );
     }
 
-    // Validasi ukuran file (max 2MB)
-    const maxSize = 2 * 1024 * 1024; // 2MB
+    // Validasi ukuran file (max 5MB - karena sudah ada kompresi di client)
+    const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       return NextResponse.json(
-        { success: false, message: "File size too large. Max 2MB" },
+        { success: false, message: "File size too large. Max 5MB" },
         { status: 400 }
       );
     }
 
     // Generate unique filename
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 8);
+    const ext = file.name.split('.').pop();
+    const filename = `${timestamp}-${randomString}.${ext}`;
+
+    // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const timestamp = Date.now();
-    const originalName = file.name.replace(/\s+/g, "-");
-    const filename = `${timestamp}-${originalName}`;
+    
+    // Create a File object for Supabase
+    const fileToUpload = new File([buffer], filename, { type: file.type });
 
-    // Create upload directory if not exists
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "bouquets");
-    await mkdir(uploadDir, { recursive: true });
+    // Upload to Supabase Storage in 'bouquets' folder
+    const result = await uploadFile(fileToUpload, 'bouquets', filename);
 
-    // Save file
-    const filepath = path.join(uploadDir, filename);
-    await writeFile(filepath, buffer);
-
-    // Return URL
-    const url = `/uploads/bouquets/${filename}`;
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, message: result.error },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
       message: "File uploaded successfully",
-      url: url,
+      url: result.url,
+      path: result.path,
+      filename: filename
     });
   } catch (error) {
     console.error("Upload error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Hapus file dari Supabase Storage
+export async function DELETE(request) {
+  try {
+    const body = await request.json();
+    const { url } = body;
+
+    if (!url) {
+      return NextResponse.json(
+        { success: false, message: "No URL provided" },
+        { status: 400 }
+      );
+    }
+
+    // Delete from Supabase Storage
+    const result = await deleteFile(url);
+
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, message: result.error },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "File deleted successfully"
+    });
+  } catch (error) {
+    console.error("Delete error:", error);
     return NextResponse.json(
       { success: false, message: error.message },
       { status: 500 }

@@ -3,68 +3,60 @@
 import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { useToast } from '../../hooks/useToast';
+import { compressImageToWebP, isImageFile, formatFileSize } from '../../lib/imageCompression';
 
 export default function ImageUpload({ value, onChange, disabled = false }) {
   const showToast = useToast(); // Toast notifications
-  const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(value || null);
+  const [compressing, setCompressing] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validasi tipe file
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      showToast.error('Format file tidak didukung. Gunakan JPG, PNG, atau WEBP');
-      return;
-    }
-
-    // Validasi ukuran (max 2MB)
-    const maxSize = 2 * 1024 * 1024;
-    if (file.size > maxSize) {
-      showToast.error('Ukuran file terlalu besar. Maksimal 2MB');
+    // Validasi file adalah gambar
+    if (!isImageFile(file)) {
+      showToast.error('Hanya file gambar yang diperbolehkan (JPG, PNG, WebP, dll)');
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
     try {
-      setUploading(true);
-
-      // Preview lokal
+      setCompressing(true);
+      
+      // Kompresi gambar ke WebP max 1MB (1024 KB)
+      const compressedFile = await compressImageToWebP(file, 1024);
+      
+      showToast.success(
+        `Gambar berhasil dikompresi dari ${formatFileSize(file.size)} menjadi ${formatFileSize(compressedFile.size)}`
+      );
+      
+      // Preview lokal saja, belum upload
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(compressedFile);
 
-      // Upload ke server
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        onChange(data.url);
-      } else {
-        throw new Error(data.message);
-      }
+      // Simpan file untuk diupload nanti saat submit
+      setSelectedFile(compressedFile);
+      onChange({ file: compressedFile, isNew: true });
+      
     } catch (error) {
-      console.error('Upload error:', error);
-      showToast.error('Gagal upload gambar: ' + error.message);
+      console.error('Compress error:', error);
+      showToast.error('Gagal memproses gambar: ' + error.message);
       setPreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } finally {
-      setUploading(false);
+      setCompressing(false);
     }
   };
 
   const handleRemove = () => {
     setPreview(null);
+    setSelectedFile(null);
     onChange(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -77,9 +69,9 @@ export default function ImageUpload({ value, onChange, disabled = false }) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/jpg,image/png,image/webp"
+          accept="image/*"
           onChange={handleFileChange}
-          disabled={disabled || uploading}
+          disabled={disabled || compressing}
           className="hidden"
           id="image-upload"
         />
@@ -87,17 +79,17 @@ export default function ImageUpload({ value, onChange, disabled = false }) {
         <label
           htmlFor="image-upload"
           className={`px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
-            disabled || uploading ? 'opacity-50 cursor-not-allowed' : ''
+            disabled || compressing ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >
-          {uploading ? 'Uploading...' : 'Pilih Gambar'}
+          {compressing ? 'Mengkompresi...' : 'Pilih Gambar'}
         </label>
 
         {preview && (
           <button
             type="button"
             onClick={handleRemove}
-            disabled={disabled || uploading}
+            disabled={disabled || compressing}
             className="px-4 py-2 text-red-600 hover:text-red-800 font-medium"
           >
             Hapus
@@ -117,7 +109,7 @@ export default function ImageUpload({ value, onChange, disabled = false }) {
       )}
 
       <p className="text-sm text-gray-500">
-        Format: JPG, PNG, WEBP. Maksimal 2MB.
+        File gambar apapun (JPG, PNG, WebP, dll). Otomatis dikonversi ke WebP dan dikompresi max 1MB. Upload akan dilakukan saat klik tombol Simpan.
       </p>
     </div>
   );

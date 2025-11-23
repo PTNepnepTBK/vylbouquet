@@ -18,6 +18,19 @@ export default function BouquetModal({ isOpen, onClose, mode = 'create', bouquet
     is_active: true,
   });
 
+  // Format number to Rupiah
+  const formatRupiah = (value) => {
+    if (!value) return '';
+    const number = parseFloat(value);
+    if (isNaN(number)) return '';
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(number);
+  };
+
   // Reset form ketika modal dibuka/tutup atau mode berubah
   useEffect(() => {
     if (isOpen) {
@@ -43,6 +56,17 @@ export default function BouquetModal({ isOpen, onClose, mode = 'create', bouquet
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    
+    // Special handling for price: remove non-digit characters
+    if (name === 'price') {
+      const numericValue = value.replace(/\D/g, '');
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue,
+      }));
+      return;
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -70,6 +94,41 @@ export default function BouquetModal({ isOpen, onClose, mode = 'create', bouquet
     try {
       setLoading(true);
 
+      let imageUrl = formData.image_url;
+      
+      // Upload image jika ada file baru
+      if (formData.image_url && typeof formData.image_url === 'object' && formData.image_url.isNew) {
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', formData.image_url.file);
+
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: uploadFormData,
+        });
+
+        const uploadData = await uploadResponse.json();
+        if (!uploadData.success) {
+          throw new Error('Gagal mengupload gambar: ' + uploadData.message);
+        }
+
+        imageUrl = uploadData.url;
+        
+        // Delete old image jika mode edit dan ada gambar lama
+        if (mode === 'edit' && bouquet?.image_url) {
+          try {
+            await fetch('/api/upload', {
+              method: 'DELETE',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: bouquet.image_url }),
+            });
+          } catch (err) {
+            console.warn('Failed to delete old image:', err);
+          }
+        }
+      }
+
       const url = mode === 'create' 
         ? '/api/bouquets' 
         : `/api/bouquets/${bouquet.id}`;
@@ -81,7 +140,11 @@ export default function BouquetModal({ isOpen, onClose, mode = 'create', bouquet
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        credentials: 'include',
+        body: JSON.stringify({
+          ...formData,
+          image_url: imageUrl,
+        }),
       });
 
       const data = await response.json();
@@ -145,20 +208,26 @@ export default function BouquetModal({ isOpen, onClose, mode = 'create', bouquet
             {/* Harga */}
             <div>
               <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
-                Harga (Rp) <span className="text-red-500">*</span>
+                Harga <span className="text-red-500">*</span>
               </label>
-              <Input
-                id="price"
-                name="price"
-                type="number"
-                value={formData.price}
-                onChange={handleChange}
-                placeholder="150000"
-                min="0"
-                step="1000"
-                required
-                disabled={loading}
-              />
+              <div className="space-y-1">
+                <Input
+                  id="price"
+                  name="price"
+                  type="text"
+                  inputMode="numeric"
+                  value={formData.price}
+                  onChange={handleChange}
+                  placeholder="150000"
+                  required
+                  disabled={loading}
+                />
+                {formData.price && (
+                  <p className="text-xs text-gray-600">
+                    💰 {formatRupiah(formData.price)}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Status Aktif */}

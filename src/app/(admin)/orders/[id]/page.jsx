@@ -33,7 +33,15 @@ export default function OrderDetailPage({ params }) {
 
   const fetchOrderDetail = async () => {
     try {
-      const response = await fetch(`/api/orders/${params.id}`);
+      const response = await fetch(`/api/orders/${params.id}`, {
+        credentials: 'include', // Sertakan cookies
+      });
+      
+      if (response.status === 401) {
+        router.push('/login');
+        return;
+      }
+      
       const data = await response.json();
       
       if (data.success) {
@@ -57,6 +65,7 @@ export default function OrderDetailPage({ params }) {
       const response = await fetch(`/api/orders/${params.id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Sertakan cookies
         body: JSON.stringify({ status: newStatus })
       });
       
@@ -83,6 +92,7 @@ export default function OrderDetailPage({ params }) {
       const response = await fetch(`/api/orders/${params.id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Sertakan cookies
         body: JSON.stringify({ payment_status: 'PAID' })
       });
       

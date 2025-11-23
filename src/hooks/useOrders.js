@@ -12,7 +12,9 @@ export function useOrders() {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch("/api/orders");
+      const response = await fetch("/api/orders", {
+        credentials: "include", // Penting: sertakan cookies untuk autentikasi
+      });
       const data = await response.json();
 
       if (data.success) {

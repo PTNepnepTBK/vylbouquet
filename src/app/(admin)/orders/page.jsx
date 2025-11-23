@@ -51,7 +51,16 @@ export default function OrdersPage() {
       if (pickupTimeTo) params.append('pickup_time_to', pickupTimeTo);
       if (opts.page) params.append('page', String(opts.page));
 
-      const res = await fetch(`/api/orders?${params.toString()}`);
+      const res = await fetch(`/api/orders?${params.toString()}`, {
+        credentials: 'include', // Penting: sertakan cookies
+      });
+      
+      if (res.status === 401) {
+        // Jika unauthorized, redirect ke login
+        router.push('/login');
+        return;
+      }
+      
       const json = await res.json();
       setOrders(json.data || []);
     } catch (err) {
@@ -60,7 +69,7 @@ export default function OrdersPage() {
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [searchQuery, pickupDateFrom, pickupDateTo, pickupTimeFrom, pickupTimeTo, initialLoading]);
+  }, [searchQuery, pickupDateFrom, pickupDateTo, pickupTimeFrom, pickupTimeTo, initialLoading, router]);
 
   // call when relevant filters change (debounce as needed)
   useEffect(() => {

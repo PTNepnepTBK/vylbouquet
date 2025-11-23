@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { uploadMultipleFiles } from "@/lib/supabaseStorage";
 
 export async function POST(request) {
   try {
@@ -14,38 +13,27 @@ export async function POST(request) {
       );
     }
 
-    // Validasi maksimal 5 file
-    if (files.length > 5) {
+    // Validasi maksimal 10 file
+    if (files.length > 10) {
       return NextResponse.json(
-        { success: false, message: "Maximum 5 files allowed" },
+        { success: false, message: "Maximum 10 files allowed" },
         { status: 400 }
       );
     }
 
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    const maxSize = 2 * 1024 * 1024; // 2MB
-    const uploadedUrls = [];
+    const maxSize = 5 * 1024 * 1024; // 5MB per file
 
     // Get upload type dari form (orders atau bouquets)
     const uploadType = formData.get("type") || "orders"; // default: orders
 
-    // Create upload directory
-    const uploadDir = path.join(
-      process.cwd(),
-      "public",
-      "uploads",
-      uploadType
-    );
-    await mkdir(uploadDir, { recursive: true });
-
-    // Process each file
+    // Validasi semua file
     for (const file of files) {
-      // Validasi tipe file
-      if (!allowedTypes.includes(file.type)) {
+      // Validasi tipe file gambar
+      if (!file.type.startsWith('image/')) {
         return NextResponse.json(
           {
             success: false,
-            message: `Invalid file type for ${file.name}. Only JPG, PNG, WEBP allowed`,
+            message: `Invalid file type for ${file.name}. Only images allowed`,
           },
           { status: 400 }
         );
@@ -56,33 +44,40 @@ export async function POST(request) {
         return NextResponse.json(
           {
             success: false,
-            message: `File ${file.name} is too large. Max 2MB per file`,
+            message: `File ${file.name} is too large. Max 5MB per file`,
           },
           { status: 400 }
         );
       }
+    }
 
-      // Generate unique filename
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const timestamp = Date.now();
-      const random = Math.random().toString(36).substring(2, 8);
-      const originalName = file.name.replace(/\s+/g, "-");
-      const filename = `${timestamp}-${random}-${originalName}`;
+    // Convert files to proper format for upload
+    const filesToUpload = await Promise.all(
+      files.map(async (file) => {
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        return new File([buffer], file.name, { type: file.type });
+      })
+    );
 
-      // Save file
-      const filepath = path.join(uploadDir, filename);
-      await writeFile(filepath, buffer);
+    // Upload to Supabase Storage
+    const result = await uploadMultipleFiles(filesToUpload, uploadType);
 
-      // Add URL to array
-      const url = `/uploads/${uploadType}/${filename}`;
-      uploadedUrls.push(url);
+    if (!result.success) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: result.error || 'Upload failed',
+          errors: result.errors 
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
       success: true,
-      message: `${uploadedUrls.length} file(s) uploaded successfully`,
-      urls: uploadedUrls,
+      message: `${result.urls.length} file(s) uploaded successfully`,
+      urls: result.urls,
     });
   } catch (error) {
     console.error("Upload multiple error:", error);

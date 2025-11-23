@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ["localhost"],
+    domains: ["localhost", "jqwvwrkxzimqcatvcjko.supabase.co"],
   },
   webpack: (config, { isServer }) => {
     if (isServer) {

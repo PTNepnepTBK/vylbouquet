@@ -8,6 +8,7 @@ import Footer from "../../../components/ui/Footer";
 import Modal from "../../../components/ui/Modal";
 import { useToast } from "../../../hooks/useToast";
 import { formatOrderWhatsAppMessage } from "../../../lib/whatsapp";
+import { compressMultipleImages, isImageFile, formatFileSize } from "../../../lib/imageCompression";
 
 function OrderPageContent() {
   const router = useRouter();
@@ -40,6 +41,7 @@ function OrderPageContent() {
 
   const [referenceFiles, setReferenceFiles] = useState([]);
   const [paymentFiles, setPaymentFiles] = useState([]);
+  const [compressing, setCompressing] = useState(false);
   const [showBouquetDropdown, setShowBouquetDropdown] = useState(false);
   const [minDate, setMinDate] = useState('');
   const [minTime, setMinTime] = useState('08:00');
@@ -192,10 +194,42 @@ function OrderPageContent() {
     setShowBouquetDropdown(false);
   };
 
-  const handleFileChange = (e, type) => {
+  const handleFileChange = async (e, type) => {
     const files = Array.from(e.target.files || []);
-    if (type === "reference") setReferenceFiles(files);
-    else if (type === "payment") setPaymentFiles(files);
+    if (files.length === 0) return;
+
+    // Validasi hanya file gambar
+    const invalidFiles = files.filter(file => !isImageFile(file));
+    if (invalidFiles.length > 0) {
+      showToast.error(`File berikut bukan gambar: ${invalidFiles.map(f => f.name).join(', ')}`);
+      e.target.value = ''; // Reset input
+      return;
+    }
+
+    try {
+      setCompressing(true);
+      showToast.info('Mengkompresi gambar...');
+      
+      // Kompresi semua gambar ke WebP max 500KB
+      const compressedFiles = await compressMultipleImages(files, 500);
+      
+      const totalOriginalSize = files.reduce((sum, f) => sum + f.size, 0);
+      const totalCompressedSize = compressedFiles.reduce((sum, f) => sum + f.size, 0);
+      
+      showToast.success(
+        `${compressedFiles.length} gambar berhasil dikompresi dari ${formatFileSize(totalOriginalSize)} menjadi ${formatFileSize(totalCompressedSize)}`
+      );
+      
+      if (type === "reference") setReferenceFiles(compressedFiles);
+      else if (type === "payment") setPaymentFiles(compressedFiles);
+      
+    } catch (error) {
+      console.error('Compression error:', error);
+      showToast.error('Gagal memproses gambar: ' + error.message);
+      e.target.value = ''; // Reset input
+    } finally {
+      setCompressing(false);
+    }
   };
 
   const uploadFiles = async (files, type) => {
@@ -279,7 +313,8 @@ function OrderPageContent() {
 
       // Build WA message and open seller chat in new tab, then redirect to order-success
       try {
-        const whatsappNumber = '6289661175822'; // fixed seller number
+        // Get WhatsApp number from settings (format: 62xxxxxxxxx)
+        const whatsappNumber = settings?.whatsapp_number?.value || settings?.whatsapp_number || '6289661175822';
         
         // Format message menggunakan fungsi dari whatsapp.js
         const formattedMessage = formatOrderWhatsAppMessage(saved, settings);
@@ -541,14 +576,23 @@ function OrderPageContent() {
                 <div className="mb-3 md:mb-4">
                   <label className="block text-xs sm:text-sm font-medium mb-1.5 md:mb-2 text-gray-700">
                     Foto Request Tambahan (Opsional)
+                    <span className="text-xs text-gray-500 font-normal ml-2">
+                      (Otomatis dikompresi ke WebP max 500KB)
+                    </span>
                   </label>
                   <input
                     type="file"
                     accept="image/*"
                     multiple
+                    disabled={compressing || uploading}
                     onChange={(e) => handleFileChange(e, "reference")}
-                    className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md text-xs sm:text-sm touch-target cursor-pointer hover:border-pink-300 transition-colors"
+                    className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md text-xs sm:text-sm touch-target cursor-pointer hover:border-pink-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   />
+                  {referenceFiles.length > 0 && (
+                    <p className="text-xs text-green-600 mt-1">
+                      ✓ {referenceFiles.length} file siap diupload
+                    </p>
+                  )}
                 </div>
 
                 <div className="mb-3 md:mb-4">
@@ -651,23 +695,34 @@ function OrderPageContent() {
                 <div className="mb-4">
                   <label className="block text-sm font-medium mb-2">
                     Upload Bukti Transfer / DP *
+                    <span className="text-xs text-gray-500 font-normal ml-2">
+                      (Otomatis dikompresi ke WebP max 500KB)
+                    </span>
                   </label>
                   <input
                     type="file"
                     accept="image/*"
                     multiple
                     required
+                    disabled={compressing || uploading}
                     onChange={(e) => handleFileChange(e, "payment")}
-                    className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md"
+                    className="w-full px-3 py-2 border border-dashed border-pink-200 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                   />
+                  {paymentFiles.length > 0 && (
+                    <p className="text-xs text-green-600 mt-1">
+                      ✓ {paymentFiles.length} file siap diupload
+                    </p>
+                  )}
                 </div>
 
                 <button
                   type="submit"
-                  disabled={loading || uploading}
+                  disabled={loading || uploading || compressing}
                   className="w-full bg-pink-400 hover:bg-pink-500 active:bg-pink-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-3 md:py-3.5 rounded-lg md:rounded-xl mt-4 md:mt-6 transition-all hover:shadow-lg text-sm sm:text-base touch-target"
                 >
-                  {uploading
+                  {compressing
+                    ? "Mengkompresi gambar..."
+                    : uploading
                     ? "Mengupload gambar..."
                     : loading
                     ? "Memproses pesanan..."

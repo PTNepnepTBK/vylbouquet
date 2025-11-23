@@ -30,7 +30,15 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch('/api/dashboard/stats');
+      const response = await fetch('/api/dashboard/stats', {
+        credentials: 'include', // Sertakan cookies untuk autentikasi
+      });
+      
+      if (response.status === 401) {
+        router.push('/login');
+        return;
+      }
+      
       const data = await response.json();
       if (data.success) {
         setStats(data.data.stats);

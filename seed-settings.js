@@ -55,7 +55,7 @@ async function seedSettings() {
       {
         key: "whatsapp_number",
         value: "6282002048431",
-        description: "Nomor WhatsApp untuk kontak",
+        description: "Nomor WhatsApp untuk redirect order (format: 62xxxxxxxxx)",
       },
       {
         key: "instagram_handle",

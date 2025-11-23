@@ -49,7 +49,15 @@ export default function BouquetsPage() {
   // Fetch stats
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/bouquets/stats');
+      const response = await fetch('/api/bouquets/stats', {
+        credentials: 'include', // Sertakan cookies untuk autentikasi
+      });
+      
+      if (response.status === 401) {
+        router.push('/login');
+        return;
+      }
+      
       const data = await response.json();
       if (data.success) {
         setStats(data.data);
@@ -67,7 +75,15 @@ export default function BouquetsPage() {
       if (search.trim() !== "") params.set("q", search.trim());
       if (statusFilter !== "all") params.set("is_active", statusFilter);
       const query = params.toString();
-      const response = await fetch(`/api/bouquets${query ? `?${query}` : ''}`);
+      const response = await fetch(`/api/bouquets${query ? `?${query}` : ''}`, {
+        credentials: 'include', // Sertakan cookies untuk autentikasi
+      });
+      
+      if (response.status === 401) {
+        router.push('/login');
+        return;
+      }
+      
       const data = await response.json();
 
       if (data.success) {
@@ -101,14 +117,30 @@ export default function BouquetsPage() {
   };
 
   // Handle hapus buket
-  const handleDelete = async (id, name) => {
+  const handleDelete = async (id, name, imageUrl) => {
     if (!confirm(`Yakin ingin menghapus buket "${name}"?`)) {
       return;
     }
 
     try {
+      // Delete image dari storage jika ada
+      if (imageUrl) {
+        try {
+          await fetch('/api/upload', {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: imageUrl }),
+          });
+        } catch (err) {
+          console.warn('Failed to delete image from storage:', err);
+        }
+      }
+
+      // Delete bouquet dari database
       const response = await fetch(`/api/bouquets/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       const data = await response.json();
@@ -299,7 +331,7 @@ export default function BouquetsPage() {
                     <span className="hidden sm:inline">Edit</span>
                   </button>
                   <button
-                    onClick={() => handleDelete(bouquet.id, bouquet.name)}
+                    onClick={() => handleDelete(bouquet.id, bouquet.name, bouquet.image_url)}
                     className="flex-1 bg-red-50 text-red-600 py-2 px-2 sm:px-3 rounded-lg hover:bg-red-100 active:bg-red-200 transition-colors font-medium text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-1.5 touch-target"
                   >
                     <TrashIcon className="w-4 h-4" />

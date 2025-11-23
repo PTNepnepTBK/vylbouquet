@@ -30,6 +30,7 @@ export function useAuth() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include", // Penting: untuk menerima dan mengirim cookies
         body: JSON.stringify({ username, password }),
       });
 
@@ -58,6 +59,7 @@ export function useAuth() {
     try {
       await fetch("/api/auth/logout", {
         method: "POST",
+        credentials: "include", // Penting: untuk mengirim cookies
       });
 
       setUser(null);
