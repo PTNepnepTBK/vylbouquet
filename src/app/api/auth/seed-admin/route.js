@@ -23,14 +23,14 @@ export async function POST(request) {
     }
 
     // Hash password
-    const hashedPassword = await hashPassword("vyl812@bouquet");
+    const hashedPassword = await hashPassword("asdasdasd@asdasd");
 
     // Buat admin baru
     const admin = await Admin.create({
-      username: "vylbouquet",
+      username: "asdasd",
       password: hashedPassword,
-      full_name: "VYL_Administrator",
-      email: "vylbouquet@gmail.com",
+      full_name: "VYL_Adminiasdasdstrator",
+      email: "vylbouqsadasdasuet@gmail.com",
       is_active: true,
     });
 
