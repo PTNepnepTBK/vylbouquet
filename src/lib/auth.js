@@ -6,7 +6,8 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-this";
 // Generate JWT token
 export function generateToken(payload) {
   try {
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
+    // Session expire dalam 24 jam (1 hari) untuk keamanan admin
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: "24h" });
   } catch (error) {
     console.error("Error generating token:", error);
     return null;
